@@ -1,0 +1,222 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>Dialog</class>
+ <widget class="QDialog" name="Dialog">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>357</width>
+    <height>344</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Kiểm tra Máy hỏi</string>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout" stretch="1,3,0">
+   <item>
+    <widget class="QWidget" name="widget" native="true">
+     <layout class="QHBoxLayout" name="horizontalLayout" stretch="3,1">
+      <item>
+       <widget class="QLabel" name="label_2">
+        <property name="text">
+         <string>Version</string>
+        </property>
+        <property name="textFormat">
+         <enum>Qt::RichText</enum>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignCenter</set>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLabel" name="label_3">
+        <property name="text">
+         <string>LOGO</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignCenter</set>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <widget class="QWidget" name="widget_2" native="true">
+     <layout class="QVBoxLayout" name="verticalLayout_2">
+      <item>
+       <widget class="QTreeWidget" name="treeWidget">
+        <property name="autoScroll">
+         <bool>true</bool>
+        </property>
+        <property name="editTriggers">
+         <set>QAbstractItemView::DoubleClicked</set>
+        </property>
+        <property name="itemsExpandable">
+         <bool>true</bool>
+        </property>
+        <column>
+         <property name="text">
+          <string>Danh sách kiểm tra</string>
+         </property>
+         <property name="font">
+          <font>
+           <weight>75</weight>
+           <bold>true</bold>
+          </font>
+         </property>
+        </column>
+        <item>
+         <property name="text">
+          <string>Máy phát</string>
+         </property>
+         <item>
+          <property name="text">
+           <string>Mô đun Điều khiển công suất</string>
+          </property>
+          <property name="icon">
+           <iconset resource="resources.qrc">
+            <normaloff>:/icons/resources/fpga.png</normaloff>:/icons/resources/fpga.png</iconset>
+          </property>
+         </item>
+        </item>
+        <item>
+         <property name="text">
+          <string>Máy thu</string>
+         </property>
+         <item>
+          <property name="text">
+           <string>Mô đun Mã hóa-giải mã</string>
+          </property>
+          <property name="icon">
+           <iconset resource="resources.qrc">
+            <normaloff>:/icons/resources/fpga.png</normaloff>:/icons/resources/fpga.png</iconset>
+          </property>
+         </item>
+        </item>
+        <item>
+         <property name="text">
+          <string>Điều khiển-Kiểm tra-Phối hợp</string>
+         </property>
+         <item>
+          <property name="text">
+           <string>Mô đun Kiểm tra</string>
+          </property>
+          <property name="icon">
+           <iconset resource="resources.qrc">
+            <normaloff>:/icons/resources/fpga.png</normaloff>:/icons/resources/fpga.png</iconset>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>Mô đun Phối hợp</string>
+          </property>
+          <property name="icon">
+           <iconset resource="resources.qrc">
+            <normaloff>:/icons/resources/fpga.png</normaloff>:/icons/resources/fpga.png</iconset>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>Mô đun Máy tính xử lý</string>
+          </property>
+          <property name="icon">
+           <iconset resource="resources.qrc">
+            <normaloff>:/icons/resources/minipc.png</normaloff>:/icons/resources/minipc.png</iconset>
+          </property>
+         </item>
+        </item>
+        <item>
+         <property name="text">
+          <string>Mã mật</string>
+         </property>
+         <item>
+          <property name="text">
+           <string>Mô đun mã mật</string>
+          </property>
+          <property name="icon">
+           <iconset resource="resources.qrc">
+            <normaloff>:/icons/resources/fpga.png</normaloff>:/icons/resources/fpga.png</iconset>
+          </property>
+         </item>
+        </item>
+        <item>
+         <property name="text">
+          <string>Điều khiển quay</string>
+         </property>
+         <item>
+          <property name="text">
+           <string>Mô đun điều khiển</string>
+          </property>
+          <property name="icon">
+           <iconset resource="resources.qrc">
+            <normaloff>:/icons/resources/microproc.png</normaloff>:/icons/resources/microproc.png</iconset>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>Mô đun công suất</string>
+          </property>
+          <property name="icon">
+           <iconset resource="resources.qrc">
+            <normaloff>:/icons/resources/microproc.png</normaloff>:/icons/resources/microproc.png</iconset>
+          </property>
+         </item>
+        </item>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <widget class="QDialogButtonBox" name="buttonBox">
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
+     </property>
+     <property name="standardButtons">
+      <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
+     </property>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <resources>
+  <include location="resources.qrc"/>
+ </resources>
+ <connections>
+  <connection>
+   <sender>buttonBox</sender>
+   <signal>accepted()</signal>
+   <receiver>Dialog</receiver>
+   <slot>accept()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>248</x>
+     <y>254</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>157</x>
+     <y>274</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>buttonBox</sender>
+   <signal>rejected()</signal>
+   <receiver>Dialog</receiver>
+   <slot>reject()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>316</x>
+     <y>260</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>286</x>
+     <y>274</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+</ui>
