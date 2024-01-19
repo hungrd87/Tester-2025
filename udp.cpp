@@ -1,4 +1,5 @@
 #include "udp.h"
+#include <QThread>
 
 Udp::Udp(QObject *parent) : QObject(parent)
 {
@@ -63,6 +64,18 @@ void Udp::slotStartTest(int module)
     resetTest();
 
     m_enabled = true;
+}
+
+void Udp::slotResetTest()
+{
+    resetTest();
+    m_enabled = true;
+}
+
+void Udp::slotStopTest()
+{
+    resetTest();
+    m_enabled = false;
 }
 
 void Udp::slotUdpReadyRead()

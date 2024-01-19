@@ -23,6 +23,8 @@ public:
 
 public slots:
     void slotStartTest(int module);
+    void slotResetTest();
+    void slotStopTest();
     void slotUdpReadyRead();
 
 protected:

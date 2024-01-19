@@ -9,18 +9,21 @@ CONFIG += c++11
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
 SOURCES += \
+    config.cpp \
     dialog.cpp \
     main.cpp \
     tester.cpp \
     udp.cpp
 
 HEADERS += \
+    config.h \
     dialog.h \
     tester.h \
     udp.h \
     udp_def.h
 
 FORMS += \
+    config.ui \
     dialog.ui \
     tester.ui
 
