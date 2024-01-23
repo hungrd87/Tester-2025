@@ -17,7 +17,7 @@
    <item>
     <widget class="QGroupBox" name="groupBox">
      <property name="title">
-      <string>Chọn giao diện kết nối mạng</string>
+      <string>Cấu hình giao diện mạng</string>
      </property>
      <layout class="QVBoxLayout" name="verticalLayout">
       <item>

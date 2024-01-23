@@ -7,13 +7,17 @@
 #include <QFile>
 #include <QProcess>
 
+
 Tester::Tester(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::Tester)
-    , m_dialog(nullptr), m_module(-1)
+    , m_dialog(nullptr), m_module(-1), m_last_module(-1), m_step(0)
 {
     ui->setupUi(this);
     QThread::currentThread()->setObjectName("MainThread");
+
+    //MenuBar
+    ui->menubar->hide();
 
     //ToolBar
     ui->toolBar->layout()->setContentsMargins(0,0,0,0);
@@ -32,9 +36,23 @@ Tester::Tester(QWidget *parent)
     ui->toolButton_3->setIcon(ui->actionReset->icon());
     ui->toolButton_4->setIcon(ui->actionStop->icon());
 
+    //StatusBar
+    m_progressBar = new QProgressBar();
+    m_progressBar->setMaximum(STAGE_GOOD);
+    m_progressBar->setValue(0);
+    m_progressBar->setAlignment(Qt::AlignCenter);
+    ui->statusbar->addWidget(m_progressBar,1);
+
+    ui->stackedWidget->setCurrentIndex(0);
+
     //Classes
     m_udp = new Udp;
     m_dialog = new Dialog(this);
+
+    //Process
+    m_process = new QProcess(this);
+    connect(m_process, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
+            this, QOverload<int, QProcess::ExitStatus>::of(&Tester::slotProcessFinished));
 
     //Threads
     m_thread = new QThread(this);
@@ -48,9 +66,11 @@ Tester::Tester(QWidget *parent)
     connect(this, &Tester::signalStartTest, m_udp, &Udp::slotStartTest);
     connect(this, &Tester::signalResetTest, m_udp, &Udp::slotResetTest);
     connect(this, &Tester::signalStopTest, m_udp, &Udp::slotStopTest);
+    connect(this, &Tester::signalIpChanged, m_udp, &Udp::slotIpChanged);
+    connect(m_udp, &Udp::signalStageChanged, this, &Tester::slotStageChanged);
 
     //Initial
-    ui->actionSelect->setEnabled(false);
+//    ui->actionSelect->setEnabled(false);
     ui->actionStart->setEnabled(false);
     ui->actionReset->setEnabled(false);
     ui->actionStop->setEnabled(false);
@@ -63,14 +83,6 @@ Tester::Tester(QWidget *parent)
     if(!QFile::exists(qApp->applicationDirPath() + "/networks.conf")){
         QTimer::singleShot(500, this, &Tester::firstConfig);
     }
-
-    //Test
-    QString program = "C:/Windows/System32/netsh.exe";
-    QStringList arguments;
-    arguments << "interface" << "ip" << "set" << "address" << "Ethernet" << "static" << "192.168.2.248" << "255.255.255.0" << "192.168.2.1";
-    QProcess *myProcess = new QProcess(this);
-    connect(myProcess, &QProcess::stateChanged, this, &Tester::stateChanged);
-    myProcess->start(program, arguments);
 }
 
 Tester::~Tester()
@@ -81,11 +93,69 @@ Tester::~Tester()
     delete ui;
 }
 
-void Tester::stateChanged(QProcess::ProcessState newState)
+void Tester::changeIp()
 {
-    QProcess *process = (QProcess*)sender();
-    qDebug() << "State change to:" << newState << "exitstatus" << process->exitStatus() << "exitcode" << process->exitCode();
+    QString iface ="";
+    QFile file(qApp->applicationDirPath()+ "/networks.conf");
+    if(file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        iface = QString(file.readLine());
+    }
+    file.close();
 
+    QString program = "C:/Windows/System32/netsh.exe";
+    QStringList arguments;
+    arguments << "interface" << "ip" << "set" << "address" << iface << "static" << "192.168.2.248" << "255.255.255.0" << "192.168.2.1";
+    m_process->start(program, arguments);
+    m_process->waitForFinished();
+
+    arguments.clear();
+    arguments << "interface" << "ip" << "add" << "address" << iface << "192.168.1.12" << "255.255.255.0";
+    m_process->start(program, arguments);
+    m_process->waitForFinished();
+
+    if(m_module == MODULE_PROCESS){
+        arguments.clear();
+        arguments << "interface" << "ip" << "add" << "address" << iface << "192.168.1.245" << "255.255.255.0";
+        m_process->start(program, arguments);
+        m_process->waitForFinished();
+
+        arguments.clear();
+        arguments << "interface" << "ip" << "add" << "address" << iface << "192.168.1.200" << "255.255.255.0";
+        m_process->start(program, arguments);
+        m_process->waitForFinished();
+    }
+    else {
+        arguments.clear();
+        arguments << "interface" << "ip" << "add" << "address" << iface << "192.168.1.240" << "255.255.255.0";
+        m_process->start(program, arguments);
+        m_process->waitForFinished();
+    }
+}
+
+void Tester::loadStep()
+{
+    QFile file(qApp->applicationDirPath() + QString("/data/steps/%1/%2.html").arg(m_module).arg(m_step));
+    if(file.open(QIODevice::ReadOnly | QIODevice::Text))
+        ui->textBrowser->setHtml(file.readAll());
+
+    QString s = qApp->applicationDirPath() + QString("/data/images/%1/%2.png").arg(m_module).arg(m_step);
+    ui->labelImage->setPixmap(QPixmap(s));
+
+    if(m_step==0){
+        ui->pushButtonPrev->setEnabled(false);
+        ui->pushButtonNext->setEnabled(true);
+    }
+    else if(m_step==3){
+        ui->pushButtonPrev->setEnabled(true);
+        ui->pushButtonNext->setEnabled(false);
+
+        ui->actionStart->setEnabled(true);
+        ui->actionStop->setEnabled(true);
+    }
+    else{
+        ui->pushButtonPrev->setEnabled(true);
+        ui->pushButtonNext->setEnabled(true);
+    }
 }
 
 void Tester::firstConfig()
@@ -103,21 +173,104 @@ void Tester::showDialog()
 
 void Tester::currentModuleChanged(int index)
 {
-    m_module = index;
+    m_module = index+1;
+
+    if((m_last_module == -1) ||
+       (m_last_module == MODULE_PROCESS && m_module != MODULE_PROCESS) ||
+       (m_module == MODULE_PROCESS && m_last_module!= MODULE_PROCESS)) {
+        changeIp();
+
+        QApplication::setOverrideCursor(QCursor(Qt::WaitCursor));
+        QThread::sleep(5);
+        QApplication::restoreOverrideCursor();
+
+        emit signalIpChanged();
+
+    }
+    m_last_module = m_module;
+
     ui->stackedWidget->setCurrentIndex(1);
+
+    m_step = 0;
+    loadStep();
+}
+
+void Tester::slotProcessFinished(int exitCode, QProcess::ExitStatus exitStatus)
+{
+    Q_UNUSED(exitCode)
+    Q_UNUSED(exitStatus)
+}
+
+void Tester::slotStageChanged(int stage)
+{
+    if(stage == STAGE_GOOD){
+        ui->pushButtonGood->setEnabled(true);
+        ui->pushButtonGood->setStyleSheet("background-color: rgb(0, 255, 0);");
+        ui->pushButtonBad->setEnabled(false);
+        ui->pushButtonBad->setStyleSheet("");
+        ui->textEditResult->clear();
+        ui->textEditResult->append("Hoàn tất kiểm tra module.");
+        m_started = false;
+    }
+    else if(stage == STAGE_BAD){
+        ui->pushButtonGood->setEnabled(false);
+        ui->pushButtonGood->setStyleSheet("");
+        ui->pushButtonBad->setEnabled(true);
+        ui->pushButtonBad->setStyleSheet("background-color: rgb(255, 0, 0);");
+        m_started = false;
+
+        ui->textEditResult->clear();
+        QFile file(qApp->applicationDirPath() + QString("/data/results/%1.html").arg(m_module));
+        if(file.open(QIODevice::ReadOnly | QIODevice::Text))
+            ui->textEditResult->setHtml(file.readAll());
+    }
+    else if(stage == STAGE_IDLE){
+        ui->pushButtonGood->setEnabled(false);
+        ui->pushButtonGood->setStyleSheet("");
+        ui->pushButtonBad->setEnabled(false);
+        ui->pushButtonBad->setStyleSheet("");
+        ui->textEditResult->clear();
+        ui->textEditResult->append("Sẵn sàng kiểm tra!");
+        m_started = false;
+    }
+    else{
+        m_started = true;
+        ui->pushButtonGood->setEnabled(false);
+        ui->pushButtonGood->setStyleSheet("");
+        ui->pushButtonBad->setEnabled(false);
+        ui->pushButtonBad->setStyleSheet("");
+        ui->textEditResult->clear();
+        ui->textEditResult->append("Đang tự động kiểm tra...");
+        ui->statusbar->clearMessage();
+    }
 }
 
 int g_status = 0;
 void Tester::timerEvent(QTimerEvent *)
 {
-    if(m_udp->armOnline() && m_udp->fpgaOnline())
-        ui->statusbar->showMessage("Connected!");
-    else if (!m_udp->armOnline() && !m_udp->fpgaOnline())
-        ui->statusbar->showMessage("No connection");
-    else if (!m_udp->fpgaOnline())
-        ui->statusbar->showMessage("No connection to FPGA");
-    else
-        ui->statusbar->showMessage("No connection to ARM");
+    if(!m_started){
+        if(m_udp->armOnline() && m_udp->fpgaOnline()){
+            ui->actionSelect->setEnabled(true);
+            ui->frame->setEnabled(true);
+            ui->statusbar->showMessage("Sẵn sàng kết nối!");
+        }
+        else{
+            ui->actionSelect->setEnabled(false);
+            ui->frame->setEnabled(false);
+            if (!m_udp->armOnline() && !m_udp->fpgaOnline())
+                ui->statusbar->showMessage("Không có kết nối");
+            else if (!m_udp->fpgaOnline())
+                ui->statusbar->showMessage("Không có kết nối Device 1");
+            else
+                ui->statusbar->showMessage("Không có kết nối Device 2");
+        }
+    }
+    else{
+        m_progressBar->setValue(m_udp->stage());
+        m_progressBar->setFormat(QString("%p% - %1").arg(stages[m_udp->stage()]));
+
+//        ui->statusbar->showMessage(stages[m_udp->stage()]);
+    }
 }
 
 void Tester::on_actionSelect_triggered()
@@ -134,17 +287,32 @@ void Tester::on_actionExit_triggered()
 void Tester::on_actionStart_triggered()
 {
     emit signalStartTest(m_module);
+    ui->actionStart->setEnabled(false);
+    ui->actionReset->setEnabled(true);
+    ui->actionStop->setEnabled(true);
+    ui->statusbar->clearMessage();
+
+    ui->pushButtonPrev->setEnabled(false);
 }
 
 void Tester::on_actionReset_triggered()
 {
     emit signalResetTest();
+    ui->actionStart->setEnabled(false);
+    ui->actionReset->setEnabled(true);
+    ui->actionStop->setEnabled(true);
+    ui->statusbar->clearMessage();
 }
 
 void Tester::on_actionStop_triggered()
 {
     emit signalStopTest();
     ui->stackedWidget->setCurrentIndex(0);
+
+    ui->actionStart->setEnabled(false);
+    ui->actionReset->setEnabled(false);
+    ui->actionStop->setEnabled(false);
+    ui->statusbar->clearMessage();
 }
 
 void Tester::on_actionContents_triggered()
@@ -155,4 +323,18 @@ void Tester::on_actionContents_triggered()
 void Tester::on_actionAbout_triggered()
 {
 
+}
+
+void Tester::on_pushButtonPrev_clicked()
+{
+    if(m_step>0)
+        m_step--;
+    loadStep();
+}
+
+void Tester::on_pushButtonNext_clicked()
+{
+    if(m_step<3)
+        m_step++;
+    loadStep();
 }

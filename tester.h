@@ -2,6 +2,7 @@
 #define TESTER_H
 
 #include <QMainWindow>
+#include <QtWidgets>
 #include <QProcess>
 #include "dialog.h"
 #include "udp.h"
@@ -19,16 +20,21 @@ public:
     Tester(QWidget *parent = nullptr);
     ~Tester();    
 
+    void changeIp();
+    void loadStep();
+
 public slots:
-    void stateChanged(QProcess::ProcessState newState);
     void firstConfig();
     void showDialog();
     void currentModuleChanged(int);
+    void slotProcessFinished(int exitCode, QProcess::ExitStatus exitStatus);
+    void slotStageChanged(int);
 
 signals:
     void signalStartTest(int module);
     void signalResetTest();
     void signalStopTest();
+    void signalIpChanged();
 
 protected:
     void timerEvent(QTimerEvent *) override;
@@ -48,11 +54,18 @@ private slots:
 
     void on_actionAbout_triggered();
 
+    void on_pushButtonPrev_clicked();
+
+    void on_pushButtonNext_clicked();
+
 private:
     Ui::Tester *ui;
     QDialog *m_dialog;
     Udp *m_udp;
     QThread *m_thread;
-    int m_module;
+    QProcess *m_process;
+    QProgressBar *m_progressBar;
+    int m_module, m_last_module, m_step;
+    bool m_started;
 };
 #endif // TESTER_H

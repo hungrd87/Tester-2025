@@ -2,6 +2,8 @@
 #include "ui_config.h"
 #include <QNetworkInterface>
 #include <QFile>
+#include <QDialogButtonBox>
+#include <QPushButton>
 
 Config::Config(QWidget *parent) :
     QDialog(parent),
@@ -13,6 +15,9 @@ Config::Config(QWidget *parent) :
     foreach(QNetworkInterface iFace, allInterfaces) {
         ui->comboBox->addItem(iFace.humanReadableName());
     }
+
+    ui->buttonBox->button(QDialogButtonBox::Ok)->setText("Thiết lập");
+    ui->buttonBox->button(QDialogButtonBox::Cancel)->setText("Hủy");
 }
 
 Config::~Config()
@@ -29,28 +34,5 @@ void Config::on_buttonBox_clicked(QAbstractButton *button)
             file.write(interface.toUtf8());
         }
         file.close();
-
-        //
-        QString eth0 = QString("netsh interface ip set address \"%1\" static 192.168.2.248 255.255.255.0 192.168.2.1\n"
-                               "netsh interface ip add address \"%1\" 192.168.1.100 255.255.255.0\n"
-                               "netsh interface ip add address \"%1\" 192.168.1.240 255.255.255.0")
-                               .arg(interface);
-        QString eth1 = QString("netsh interface ip set address \"%1\" static 192.168.2.248 255.255.255.0 192.168.2.1\n"
-                               "netsh interface ip add address \"%1\" 192.168.1.100 255.255.255.0\n"
-                               "netsh interface ip add address \"%1\" 192.168.1.245 255.255.255.0\n"
-                               "netsh interface ip add address \"%1\" 192.168.1.200 255.255.255.0")
-                               .arg(interface);
-
-        QFile f0(qApp->applicationDirPath()+ "/eth0.bat");
-        if(f0.open(QIODevice::WriteOnly | QIODevice::Text)) {
-            f0.write(eth0.toUtf8());
-        }
-        f0.close();
-
-        QFile f1(qApp->applicationDirPath()+ "/eth1.bat");
-        if(f1.open(QIODevice::WriteOnly | QIODevice::Text)) {
-            f1.write(eth1.toUtf8());
-        }
-        f1.close();
     }
 }

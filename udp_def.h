@@ -3,8 +3,14 @@
 
 #include <QString>
 
-const int __UDP_PORT__ = 12345;
-const QString __UDP_IP__ = "192.168.2.22";
+const int __HOST_PORT__ = 1000;
+const QString __HOST_IP__ = "192.168.1.12";
+const int __FPGA_PORT__ = 100;
+const QString __FPGA_IP__ = "192.168.1.14";
+const int __PROCESS_PORT__ = 12789;
+const QString __PROCESS_IP__ = "192.168.1.240";
+const int __INTERCONNECT_PORT__ = 12345;
+const QString __INTERCONNECT_IP__ = "192.168.1.245";
 const int __UDP_CMD_LEN = 10;
 const int __UDP_ARM_LEN__ = 77;
 const int __UDP_FPGA_LEN__ = 7;
@@ -58,8 +64,8 @@ enum MODULE_ENUM {
     MODULE_RECEIVER = 2,
     MODULE_TEST = 3,
     MODULE_INTERCONNECT = 4,
-    MODULE_CODER = 5,
-    MODULE_PROCESS = 6,
+    MODULE_PROCESS = 5,
+    MODULE_CODER = 6,
     MODULE_ANTEN1 = 7,
     MODULE_ANTEN2 = 8
 };
@@ -72,27 +78,44 @@ enum PC_CMD_ENUM {
 enum STAGE_ENUM {
     STAGE_IDLING = 0,
     STAGE_IDLE = 1,
-    STAGE_PREPARING = 2,
-    STAGE_READY = 3,
-    STAGE_FPGA_TEST = 4,
-    STAGE_COMBINE_TEST = 5,
-    STAGE_PC_TEST = 6,
-    STAGE_GOOD = 7,
-    STAGE_BAD = 8
+    STAGE_START = 2,
+    STAGE_ARM_PREPARE = 3,
+    STAGE_FPGA_PREPARE = 4,
+    STAGE_FPGA_READY = 5,
+    STAGE_FPGA_TEST = 6,
+    STAGE_COMBINE_TEST = 7,
+    STAGE_PC_TEST = 8,
+    STAGE_GOOD = 9,
+    STAGE_BAD = 10,
+    STAGE_FINISHED = 11,
+    STAGE_LEN = 12
 };
 
+const QString stages[12] = {"IDLING",
+                           "IDLE",
+                           "START",
+                           "ARM_PREPARE",
+                           "FPGA_PREPARE",
+                           "FPGA_READY",
+                           "FPGA_TEST",
+                           "COMBINE_TEST",
+                           "PC_TEST",
+                           "GOOD",
+                           "BAD",
+                           "FINISHED"};
+
 struct ARM_DATA_STRUCT{
-    char mode;
-    char remote;
-    char working;
-    char transmit;
-    char codeH1;
-    char codeTL1;
-    char codeH3;
-    char codeTL3;
-    char cheap;
-    char anten;
-    char anten_sp;
+    int mode;
+    int remote;
+    int working;
+    int transmit;
+    int codeH1;
+    int codeTL1;
+    int codeH3;
+    int codeTL3;
+    int cheap;
+    int anten;
+    int anten_sp;
     int csphat;
     int csphanxa;
 };

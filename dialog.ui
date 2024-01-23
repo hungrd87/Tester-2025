@@ -20,7 +20,7 @@
       <item>
        <widget class="QLabel" name="label_2">
         <property name="text">
-         <string>Version</string>
+         <string>HIỂN THỊ VERSION PHẦN MỀM</string>
         </property>
         <property name="textFormat">
          <enum>Qt::RichText</enum>
@@ -33,7 +33,8 @@
       <item>
        <widget class="QLabel" name="label_3">
         <property name="text">
-         <string>LOGO</string>
+         <string>ẢNH 
+MÁY HỎI</string>
         </property>
         <property name="alignment">
          <set>Qt::AlignCenter</set>
@@ -76,10 +77,6 @@
           <property name="text">
            <string>Mô đun Điều khiển công suất</string>
           </property>
-          <property name="icon">
-           <iconset resource="resources.qrc">
-            <normaloff>:/icons/resources/fpga.png</normaloff>:/icons/resources/fpga.png</iconset>
-          </property>
          </item>
         </item>
         <item>
@@ -89,10 +86,6 @@
          <item>
           <property name="text">
            <string>Mô đun Mã hóa-giải mã</string>
-          </property>
-          <property name="icon">
-           <iconset resource="resources.qrc">
-            <normaloff>:/icons/resources/fpga.png</normaloff>:/icons/resources/fpga.png</iconset>
           </property>
          </item>
         </item>
@@ -104,27 +97,15 @@
           <property name="text">
            <string>Mô đun Kiểm tra</string>
           </property>
-          <property name="icon">
-           <iconset resource="resources.qrc">
-            <normaloff>:/icons/resources/fpga.png</normaloff>:/icons/resources/fpga.png</iconset>
-          </property>
          </item>
          <item>
           <property name="text">
            <string>Mô đun Phối hợp</string>
           </property>
-          <property name="icon">
-           <iconset resource="resources.qrc">
-            <normaloff>:/icons/resources/fpga.png</normaloff>:/icons/resources/fpga.png</iconset>
-          </property>
          </item>
          <item>
           <property name="text">
            <string>Mô đun Máy tính xử lý</string>
-          </property>
-          <property name="icon">
-           <iconset resource="resources.qrc">
-            <normaloff>:/icons/resources/minipc.png</normaloff>:/icons/resources/minipc.png</iconset>
           </property>
          </item>
         </item>
@@ -136,10 +117,6 @@
           <property name="text">
            <string>Mô đun mã mật</string>
           </property>
-          <property name="icon">
-           <iconset resource="resources.qrc">
-            <normaloff>:/icons/resources/fpga.png</normaloff>:/icons/resources/fpga.png</iconset>
-          </property>
          </item>
         </item>
         <item>
@@ -150,18 +127,10 @@
           <property name="text">
            <string>Mô đun điều khiển</string>
           </property>
-          <property name="icon">
-           <iconset resource="resources.qrc">
-            <normaloff>:/icons/resources/microproc.png</normaloff>:/icons/resources/microproc.png</iconset>
-          </property>
          </item>
          <item>
           <property name="text">
            <string>Mô đun công suất</string>
-          </property>
-          <property name="icon">
-           <iconset resource="resources.qrc">
-            <normaloff>:/icons/resources/microproc.png</normaloff>:/icons/resources/microproc.png</iconset>
           </property>
          </item>
         </item>
@@ -182,9 +151,7 @@
    </item>
   </layout>
  </widget>
- <resources>
-  <include location="resources.qrc"/>
- </resources>
+ <resources/>
  <connections>
   <connection>
    <sender>buttonBox</sender>

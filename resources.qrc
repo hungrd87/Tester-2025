@@ -1,8 +1,9 @@
 <RCC>
     <qresource prefix="/icons">
-        <file>resources/fpga.png</file>
-        <file>resources/microproc.png</file>
-        <file>resources/minipc.png</file>
         <file>resources/icons8-index-100.png</file>
+        <file>resources/icons8-microcontroller-32.png</file>
+        <file>resources/icons8-electronics-48.png</file>
+        <file>resources/icons8-arduino-uno-board-32.png</file>
+        <file>resources/icons8-hand-right-32.png</file>
     </qresource>
 </RCC>
