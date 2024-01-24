@@ -34,5 +34,7 @@ void Config::on_buttonBox_clicked(QAbstractButton *button)
             file.write(interface.toUtf8());
         }
         file.close();
+
+        emit signalConfigured();
     }
 }

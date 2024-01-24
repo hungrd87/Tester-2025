@@ -29,6 +29,7 @@ public slots:
     void currentModuleChanged(int);
     void slotProcessFinished(int exitCode, QProcess::ExitStatus exitStatus);
     void slotStageChanged(int);
+    void slotConfigured();
 
 signals:
     void signalStartTest(int module);

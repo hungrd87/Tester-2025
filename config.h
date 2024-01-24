@@ -16,6 +16,9 @@ public:
     explicit Config(QWidget *parent = nullptr);
     ~Config();
 
+signals:
+    void signalConfigured();
+
 private slots:
     void on_buttonBox_clicked(QAbstractButton *button);
 

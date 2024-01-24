@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE QtCreatorProject>
-<!-- Written by QtCreator 12.0.1, 2024-01-22T20:42:24. -->
+<!-- Written by QtCreator 12.0.1, 2024-01-24T09:18:42. -->
 <qtcreator>
  <data>
   <variable>EnvironmentId</variable>
@@ -244,12 +244,16 @@
     <value type="QList&lt;int&gt;" key="Analyzer.Valgrind.VisibleErrorKinds"></value>
     <valuelist type="QVariantList" key="CustomOutputParsers"/>
     <value type="int" key="PE.EnvironmentAspect.Base">2</value>
-    <valuelist type="QVariantList" key="PE.EnvironmentAspect.Changes"/>
+    <valuelist type="QVariantList" key="PE.EnvironmentAspect.Changes">
+     <value type="QString">&lt;VARIABLE&gt;=&lt;VALUE&gt;</value>
+     <value type="QString">__COMPAT_LAYER=RUNASINVOKER</value>
+    </valuelist>
     <value type="bool" key="PE.EnvironmentAspect.PrintOnRun">false</value>
     <value type="QString" key="ProjectExplorer.ProjectConfiguration.DisplayName"></value>
     <value type="QString" key="ProjectExplorer.ProjectConfiguration.Id">Qt4ProjectManager.Qt4RunConfiguration:J:/WORKTEMP/GIATHU-MH/Sources/Tester/Tester.pro</value>
     <value type="QString" key="ProjectExplorer.RunConfiguration.BuildKey">J:/WORKTEMP/GIATHU-MH/Sources/Tester/Tester.pro</value>
-    <value type="bool" key="ProjectExplorer.RunConfiguration.Customized">false</value>
+    <value type="bool" key="ProjectExplorer.RunConfiguration.Customized">true</value>
+    <value type="QString" key="RunConfiguration.Arguments">--log</value>
     <value type="bool" key="RunConfiguration.UseCppDebuggerAuto">true</value>
     <value type="bool" key="RunConfiguration.UseLibrarySearchPath">true</value>
     <value type="bool" key="RunConfiguration.UseQmlDebuggerAuto">true</value>

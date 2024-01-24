@@ -11,7 +11,7 @@
 Tester::Tester(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::Tester)
-    , m_dialog(nullptr), m_module(-1), m_last_module(-1), m_step(0)
+    , m_dialog(nullptr), m_module(-1), m_last_module(-1), m_step(1)
 {
     ui->setupUi(this);
     QThread::currentThread()->setObjectName("MainThread");
@@ -44,6 +44,7 @@ Tester::Tester(QWidget *parent)
     ui->statusbar->addWidget(m_progressBar,1);
 
     ui->stackedWidget->setCurrentIndex(0);
+    ui->labelLogo->setPixmap(QPixmap(qApp->applicationDirPath() + QString("/data/images/logo.png")));
 
     //Classes
     m_udp = new Udp;
@@ -83,6 +84,8 @@ Tester::Tester(QWidget *parent)
     if(!QFile::exists(qApp->applicationDirPath() + "/networks.conf")){
         QTimer::singleShot(500, this, &Tester::firstConfig);
     }
+
+    qDebug() << "STARTED";
 }
 
 Tester::~Tester()
@@ -104,12 +107,7 @@ void Tester::changeIp()
 
     QString program = "C:/Windows/System32/netsh.exe";
     QStringList arguments;
-    arguments << "interface" << "ip" << "set" << "address" << iface << "static" << "192.168.2.248" << "255.255.255.0" << "192.168.2.1";
-    m_process->start(program, arguments);
-    m_process->waitForFinished();
-
-    arguments.clear();
-    arguments << "interface" << "ip" << "add" << "address" << iface << "192.168.1.12" << "255.255.255.0";
+    arguments << "interface" << "ip" << "set" << "address" << iface << "static" << "192.168.1.12" << "255.255.255.0" << "192.168.1.1";
     m_process->start(program, arguments);
     m_process->waitForFinished();
 
@@ -139,9 +137,11 @@ void Tester::loadStep()
         ui->textBrowser->setHtml(file.readAll());
 
     QString s = qApp->applicationDirPath() + QString("/data/images/%1/%2.png").arg(m_module).arg(m_step);
-    ui->labelImage->setPixmap(QPixmap(s));
+    // QPixmap pixmap = QPixmap(s);
+    QPixmap pixmap = QPixmap(s).scaled(ui->labelImage->size(),Qt::KeepAspectRatio);
+    ui->labelImage->setPixmap(pixmap);
 
-    if(m_step==0){
+    if(m_step==1){
         ui->pushButtonPrev->setEnabled(false);
         ui->pushButtonNext->setEnabled(true);
     }
@@ -163,6 +163,8 @@ void Tester::firstConfig()
     Config *config = new Config(this);
     config->setAttribute(Qt::WA_DeleteOnClose);
     config->setAttribute(Qt::WA_AlwaysStackOnTop);
+    connect(config, &Config::signalConfigured, this, &Tester::slotConfigured);
+
     config->show();
 }
 
@@ -190,8 +192,9 @@ void Tester::currentModuleChanged(int index)
     m_last_module = m_module;
 
     ui->stackedWidget->setCurrentIndex(1);
+    ui->actionSelect->setEnabled(false);
 
-    m_step = 0;
+    m_step = 1;
     loadStep();
 }
 
@@ -208,8 +211,6 @@ void Tester::slotStageChanged(int stage)
         ui->pushButtonGood->setStyleSheet("background-color: rgb(0, 255, 0);");
         ui->pushButtonBad->setEnabled(false);
         ui->pushButtonBad->setStyleSheet("");
-        ui->textEditResult->clear();
-        ui->textEditResult->append("Hoàn tất kiểm tra module.");
         m_started = false;
     }
     else if(stage == STAGE_BAD){
@@ -219,18 +220,17 @@ void Tester::slotStageChanged(int stage)
         ui->pushButtonBad->setStyleSheet("background-color: rgb(255, 0, 0);");
         m_started = false;
 
-        ui->textEditResult->clear();
+        ui->groupBoxLeft->setTitle("Chẩn đoán và Hướng dẫn khắc phục");
         QFile file(qApp->applicationDirPath() + QString("/data/results/%1.html").arg(m_module));
         if(file.open(QIODevice::ReadOnly | QIODevice::Text))
-            ui->textEditResult->setHtml(file.readAll());
+            ui->textBrowser->setHtml(file.readAll());
+
     }
     else if(stage == STAGE_IDLE){
         ui->pushButtonGood->setEnabled(false);
         ui->pushButtonGood->setStyleSheet("");
         ui->pushButtonBad->setEnabled(false);
         ui->pushButtonBad->setStyleSheet("");
-        ui->textEditResult->clear();
-        ui->textEditResult->append("Sẵn sàng kiểm tra!");
         m_started = false;
     }
     else{
@@ -239,10 +239,21 @@ void Tester::slotStageChanged(int stage)
         ui->pushButtonGood->setStyleSheet("");
         ui->pushButtonBad->setEnabled(false);
         ui->pushButtonBad->setStyleSheet("");
-        ui->textEditResult->clear();
-        ui->textEditResult->append("Đang tự động kiểm tra...");
         ui->statusbar->clearMessage();
     }
+}
+
+void Tester::slotConfigured()
+{
+    changeIp();
+
+    QApplication::setOverrideCursor(QCursor(Qt::WaitCursor));
+    QThread::sleep(10);
+    QApplication::restoreOverrideCursor();
+
+    qDebug() << "Changed IPs";
+
+    emit signalIpChanged();
 }
 
 int g_status = 0;
@@ -250,7 +261,8 @@ void Tester::timerEvent(QTimerEvent *)
 {
     if(!m_started){
         if(m_udp->armOnline() && m_udp->fpgaOnline()){
-            ui->actionSelect->setEnabled(true);
+            if(ui->stackedWidget->currentIndex()==0)
+                ui->actionSelect->setEnabled(true);
             ui->frame->setEnabled(true);
             ui->statusbar->showMessage("Sẵn sàng kết nối!");
         }
@@ -267,7 +279,7 @@ void Tester::timerEvent(QTimerEvent *)
     }
     else{
         m_progressBar->setValue(m_udp->stage());
-        m_progressBar->setFormat(QString("%p% - %1").arg(stages[m_udp->stage()]));
+        // m_progressBar->setFormat(QString("%p% - %1").arg(stages[m_udp->stage()]));
 
 //        ui->statusbar->showMessage(stages[m_udp->stage()]);
     }
@@ -302,17 +314,26 @@ void Tester::on_actionReset_triggered()
     ui->actionReset->setEnabled(true);
     ui->actionStop->setEnabled(true);
     ui->statusbar->clearMessage();
+
+    ui->groupBoxLeft->setTitle("Các bước thực hiện");
+    QFile file(qApp->applicationDirPath() + QString("/data/steps/%1/3.html").arg(m_module));
+    if(file.open(QIODevice::ReadOnly | QIODevice::Text))
+        ui->textBrowser->setHtml(file.readAll());
 }
 
 void Tester::on_actionStop_triggered()
 {
     emit signalStopTest();
     ui->stackedWidget->setCurrentIndex(0);
+    ui->actionSelect->setEnabled(true);
 
     ui->actionStart->setEnabled(false);
     ui->actionReset->setEnabled(false);
     ui->actionStop->setEnabled(false);
     ui->statusbar->clearMessage();
+
+    ui->groupBoxLeft->setTitle("Các bước thực hiện");
+    ui->textBrowser->clear();
 }
 
 void Tester::on_actionContents_triggered()
@@ -327,7 +348,7 @@ void Tester::on_actionAbout_triggered()
 
 void Tester::on_pushButtonPrev_clicked()
 {
-    if(m_step>0)
+    if(m_step>1)
         m_step--;
     loadStep();
 }

@@ -147,8 +147,12 @@ void Udp::slotPseudoInterConnectReadyRead()
         m_pseduo_interconnect->readDatagram(dat, len, &sender, &senderPort);
         if((senderPort == __PROCESS_PORT__) && (sender.toString().contains(__PROCESS_IP__)))
         {
-            QByteArray data_found_ip("\x55\xaa\x11\x11\x11\x11\x55");
-            if(len == data_found_ip.length() && (data_found_ip==QByteArray(dat,len)))
+            QByteArray data_ip_found("\x55\xaa\x11\x11\x11\x11\x55");
+            QByteArray data_ip_notfound("\x55\xaa\x00\x00\x00\x00\x55");
+            // if(len == data_ip_found.length() && (data_ip_found==QByteArray(dat,len)))
+            //     m_process_ok = true;
+            if((len == data_ip_found.length() && (data_ip_found==QByteArray(dat,len))) ||
+                (len == data_ip_notfound.length() && (data_ip_notfound==QByteArray(dat,len))))
                 m_process_ok = true;
         }
 
@@ -162,13 +166,11 @@ void Udp::slotIpChanged()
     m_pseduo_process->disconnectFromHost();
     m_pseduo_interconnect->disconnectFromHost();
 
-//    QApplication::setOverrideCursor(QCursor(Qt::WaitCursor));
-//    QThread::sleep(6);
-//    QApplication::restoreOverrideCursor();
-
     m_udp->bind(QHostAddress(__HOST_IP__),__HOST_PORT__, QUdpSocket::ShareAddress);
     m_pseduo_process->bind(QHostAddress(__PROCESS_IP__),__PROCESS_PORT__, QUdpSocket::ShareAddress);
     m_pseduo_interconnect->bind(QHostAddress(__INTERCONNECT_IP__),__INTERCONNECT_PORT__, QUdpSocket::ShareAddress);
+
+    qDebug() << "Rebinded UDP sockets!";
 }
 
 void Udp::slotPingFinished(int exitCode, QProcess::ExitStatus exitStatus)
@@ -292,11 +294,10 @@ void Udp::decodeArm(char *data, int len)
         }
     }
 
-//    //Test
-//    qDebug() << "mode" << m_arm_sta.mode << "working" << m_arm_sta.working << "transmit" << m_arm_sta.transmit;
-//    qDebug() << "codeH1" << m_arm_sta.codeH1 << "codeTL1" << m_arm_sta.codeTL1 << "codeH3" << m_arm_sta.codeH3 << "codeTL3" << m_arm_sta.codeTL3;
-//    qDebug() << "csphat" << m_arm_sta.csphat << "csphanxa" << m_arm_sta.csphanxa;
-
+   //Test
+   qDebug() << "mode" << m_arm_sta.mode << "working" << m_arm_sta.working << "transmit" << m_arm_sta.transmit;
+   qDebug() << "codeH1" << m_arm_sta.codeH1 << "codeTL1" << m_arm_sta.codeTL1 << "codeH3" << m_arm_sta.codeH3 << "codeTL3" << m_arm_sta.codeTL3;
+   qDebug() << "csphat" << m_arm_sta.csphat << "csphanxa" << m_arm_sta.csphanxa;
 }
 
 void Udp::sendToArm(int cmd_id)
@@ -347,7 +348,7 @@ void Udp::sendToArm(int cmd_id)
 
 void Udp::sendToFpga()
 {
-    QByteArray cmd = QByteArray(9,0x00);
+    QByteArray cmd = QByteArray(10,0x00);
     cmd[0] = 0x02;
     cmd[2] = 0xFF;
     cmd[3] = m_cmdFpga;
@@ -374,11 +375,13 @@ void Udp::testLoop()
         m_stage = STAGE_IDLING;
         m_requestReset = false;
         m_requestStart = true;
+        qInfo() << "Enter IDLING";
     }
     else if(m_requestStop){
         m_stage = STAGE_IDLING;
         m_requestReset = false;
         m_requestStop = false;
+        qInfo() << "Enter IDLING";
     }
 
     //One Loop
@@ -390,6 +393,7 @@ void Udp::testLoop()
         if(m_status==FPGA_STA_IDLE){
             m_stage = STAGE_IDLE;
             emit signalStageChanged(m_stage);
+            qInfo() << "Enter IDLE";
         }
         break;
     case STAGE_IDLE:    //Waiting for START
@@ -398,27 +402,29 @@ void Udp::testLoop()
         emit signalStageChanged(m_stage);
         QThread::sleep(2);
         m_stage = STAGE_ARM_PREPARE;
+        qInfo() << "Enter ARM_PREPARE";
         break;
     case STAGE_ARM_PREPARE:
         if(prepareArm()){
             QThread::sleep(2);
             m_stage = STAGE_FPGA_PREPARE;
             m_cmdFpga = FPGA_CMD_PREPARE;
+            qInfo() << "Enter FPGA_PREPARE";
         }
         break;
     case STAGE_FPGA_PREPARE:
         if(m_status==FPGA_STA_READY){
             QThread::sleep(2);
             m_stage = STAGE_FPGA_READY;
+            qInfo() << "Enter FPGA_READY";
         }
         break;
     case STAGE_FPGA_READY:
-        if(m_status==FPGA_STA_READY){
-            QThread::sleep(2);
-            m_stage = STAGE_FPGA_TEST;
-            m_cmdFpga = FPGA_CMD_FPGA_TEST;
-            m_result = RESULT_NONE;
-        }
+        QThread::sleep(2);
+        m_stage = STAGE_FPGA_TEST;
+        m_cmdFpga = FPGA_CMD_FPGA_TEST;
+        m_result = RESULT_NONE;
+        qInfo() << "Enter FPGA_TEST";
         break;
     case STAGE_FPGA_TEST:
         if(m_status == FPGA_STA_FPGA_TEST){
@@ -430,6 +436,7 @@ void Udp::testLoop()
                 m_timeout = 0;
                 m_stage = STAGE_COMBINE_TEST;
                 m_cmdFpga = FPGA_CMD_COMBINE_TEST;
+                qInfo() << "Enter COMBINE_TEST";
             }
         }
         break;
@@ -445,14 +452,17 @@ void Udp::testLoop()
         m_final = RESULT_GOOD;
         emit signalStageChanged(m_stage);
         m_stage = STAGE_FINISHED;
+        qInfo() << "Enter GOOD --> FINISH";
         break;
     case STAGE_BAD:
         m_cmdFpga = FPGA_CMD_RESULT;
         m_final = RESULT_BAD;
         emit signalStageChanged(m_stage);
         m_stage = STAGE_FINISHED;
+        qInfo() << "Enter BAD --> FINISH";
         break;
     case STAGE_FINISHED:
+        //Waiting for the next test
         break;
     default:
         break;

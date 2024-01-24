@@ -73,6 +73,8 @@ Dialog::Dialog(QWidget *parent) :
     item->setData(0,Qt::UserRole,7);
     item->setIcon(0,QIcon(":/icons/resources/icons8-arduino-uno-board-32.png"));
 
+    ui->labelLogo->setPixmap(QPixmap(qApp->applicationDirPath() + QString("/data/images/logo.png")));
+
     ui->buttonBox->button(QDialogButtonBox::Ok)->setText("Chọn");
     ui->buttonBox->button(QDialogButtonBox::Cancel)->setText("Hủy");
 }
