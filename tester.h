@@ -1,72 +1,48 @@
 #ifndef TESTER_H
 #define TESTER_H
 
-#include <QMainWindow>
-#include <QtWidgets>
-#include <QProcess>
-#include "dialog.h"
-#include "udp.h"
-#include "config.h"
+#include <QObject>
+#include "udp_def.h"
 
-QT_BEGIN_NAMESPACE
-namespace Ui { class Tester; }
-QT_END_NAMESPACE
-
-class Tester : public QMainWindow
+class Tester : public QObject
 {
     Q_OBJECT
-
 public:
-    Tester(QWidget *parent = nullptr);
-    ~Tester();    
+    explicit Tester(QObject *parent = nullptr);
 
-    void changeIp();
-    void loadStep();
+    inline int module() {return m_module;}
+    inline int result() {return m_final;}
+    inline int stage() {return m_stage;}
+    void resetTest();
 
 public slots:
-    void firstConfig();
-    void showDialog();
-    void currentModuleChanged(int);
-    void slotProcessFinished(int exitCode, QProcess::ExitStatus exitStatus);
-    void slotStageChanged(int);
-    void slotConfigured();
-
-signals:
-    void signalStartTest(int module);
-    void signalResetTest();
-    void signalStopTest();
-    void signalIpChanged();
+    void slotStartTest(int module);
+    void slotResetTest();
+    void slotStopTest();
+    void slotInterconnectOk();
+    void slotProcessOk();
 
 protected:
-    void timerEvent(QTimerEvent *) override;
+    void timerEvent(QTimerEvent *event) override;
 
-private slots:
-    void on_actionSelect_triggered();
-
-    void on_actionExit_triggered();
-
-    void on_actionStart_triggered();
-
-    void on_actionReset_triggered();
-
-    void on_actionStop_triggered();
-
-    void on_actionContents_triggered();
-
-    void on_actionAbout_triggered();
-
-    void on_pushButtonPrev_clicked();
-
-    void on_pushButtonNext_clicked();
+signals:
+    void signalStageChanged(int);
+    void signalStageUpdate(int next_stage, int prev_result=0);
+    void signalSendToArm(int cmd_id);
+    void signalSendToInterconnect();
 
 private:
-    Ui::Tester *ui;
-    QDialog *m_dialog;
-    Udp *m_udp;
-    QThread *m_thread;
-    QProcess *m_process;
-    QProgressBar *m_progressBar;
-    int m_module, m_last_module, m_step;
-    bool m_started;
+    void testLoop();
+    bool prepareArm();
+    int combineTest();
+
+    int m_module;
+    bool m_requestStart, m_requestReset, m_requestStop;
+    int m_step;
+    int m_timeout;
+    int m_final;
+    bool m_interconnect_ok, m_process_ok;
+    int m_stage;
 };
+
 #endif // TESTER_H

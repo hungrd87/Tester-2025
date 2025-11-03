@@ -1,0 +1,7 @@
+Các trạng thái sau khi bắt đầu (START):
+1.  Prepare ARM     --> 2
+2.  Prepare FPGA    --> 3
+3.  FPGA Test       --> 4
+4.1 Result_BAD      --> Mã > 0  --> FINISH
+4.2 Result_GOOD     --> Mã = 0  --> 5
+5.  Combined Test

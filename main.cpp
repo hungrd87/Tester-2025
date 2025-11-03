@@ -1,8 +1,10 @@
-#include "tester.h"
+#include "view.h"
 
 #include <QApplication>
+#include "udp_def.h"
 
 void myMessageOutput(QtMsgType type, const QMessageLogContext&, const QString &msg);
+void getParams();
 
 int main(int argc, char *argv[])
 {
@@ -11,16 +13,17 @@ int main(int argc, char *argv[])
 
     //Check Arguments
     bool is_log = false;
-    for(int i=0; i<argc; i++)
-    {
+    for(int i=0; i<argc; i++){
         if(QString::fromLatin1(argv[i]).contains("--log") || QString::fromLatin1(argv[i]).contains("-l"))
-            is_log = true;
+            is_log = true;            
     }
 
     if(is_log)
         qInstallMessageHandler(myMessageOutput);
 
-    Tester w;
+    getParams();
+
+    View w;
     w.show();
     return a.exec();
 }
@@ -68,4 +71,12 @@ void myMessageOutput(QtMsgType type, const QMessageLogContext&, const QString &m
     ts << txt << Qt::endl;
 
     started = true;
+}
+
+void getParams()
+{
+    //Restore values of controls
+    QSettings settings(qApp->applicationDirPath() + "/Config.ini", QSettings::IniFormat);
+    g_cs_offset = settings.value("cs_offset", 1999).toInt();
+    qDebug() << "cs_offset" << g_cs_offset;
 }

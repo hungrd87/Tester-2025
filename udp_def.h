@@ -3,19 +3,6 @@
 
 #include <QString>
 
-const int __HOST_PORT__ = 1000;
-const QString __HOST_IP__ = "192.168.1.12";
-const int __FPGA_PORT__ = 100;
-const QString __FPGA_IP__ = "192.168.1.14";
-const int __PROCESS_PORT__ = 12789;
-const QString __PROCESS_IP__ = "192.168.1.240";
-const int __INTERCONNECT_PORT__ = 12345;
-const QString __INTERCONNECT_IP__ = "192.168.1.245";
-const int __UDP_CMD_LEN = 10;
-const int __UDP_ARM_LEN__ = 77;
-const int __UDP_FPGA_LEN__ = 7;
-const int __FRAME_ARM_LEN__ = 7;
-
 enum ARM_CMD_ENUM {
     ARM_CMD_NONE = 0x00,
     ARM_CMD_MODE = 0x01,
@@ -51,8 +38,8 @@ enum FPGA_STA_ENUM {
 };
 
 enum RESULT_ENUM {
-    RESULT_GOOD = 0x10,
-    RESULT_BAD = 0x00,
+    RESULT_GOOD = 0x00, //Thay đổi theo giao thức mới (2025)
+    RESULT_BAD = 0x01,  //Mã lỗi mới (2025)
     RESULT_TIMEOUT = 253,
     RESULT_UNKNOWN = 254,
     RESULT_NONE = 255
@@ -120,6 +107,37 @@ struct ARM_DATA_STRUCT{
     int csphanxa;
 };
 
+struct  FPGA_DATA_STRUCT
+{
+    FPGA_DATA_STRUCT() {}
+    int cmd0;
+    int cmd1;
+    int status;
+    int module;
+    int step;
+    int result;
+};
 
+//Constants
+const int __HOST_PORT__ = 1000;
+const QString __HOST_IP__ = "192.168.1.12";
+const int __FPGA_PORT__ = 100;
+const QString __FPGA_IP__ = "192.168.1.14";
+const int __PROCESS_PORT__ = 12789;
+const QString __PROCESS_IP__ = "192.168.1.240";
+const int __INTERCONNECT_PORT__ = 12345;
+const QString __INTERCONNECT_IP__ = "192.168.1.245";
+const int __UDP_CMD_LEN = 10;
+const int __UDP_ARM_LEN__ = 77;
+const int __UDP_FPGA_LEN__ = 7;
+const int __FRAME_ARM_LEN__ = 7;
+
+//Global Variables
+extern ARM_DATA_STRUCT g_arm_cmd;
+extern ARM_DATA_STRUCT g_arm_sta;
+extern FPGA_DATA_STRUCT g_fpga_cmd;
+extern FPGA_DATA_STRUCT g_fpga_sta;
+
+extern int g_cs_offset;
 
 #endif // UDP_DEF_H
