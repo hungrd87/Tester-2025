@@ -50,6 +50,10 @@ private slots:
     void runSimulationStep();
     void onSimulationFinished();
 
+    void onComponentGeometryChanged(int index, const QRect &newRect);
+    void onErrorListRowsMoved(const QModelIndex &sourceParent, int sourceStart, int sourceEnd,
+                              const QModelIndex &destinationParent, int destinationRow);
+
 private:
     void setupUI();
     void updateComponentList();
@@ -94,6 +98,8 @@ private:
     QPushButton *m_statusFailButton;
 
     QWidget *m_rightPanel;
+
+    bool m_isAdmin;
 
     STAGE_ENUM m_currentStage;
 

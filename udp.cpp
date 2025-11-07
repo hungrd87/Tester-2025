@@ -171,6 +171,7 @@ void Udp::decodeFpga(char *data)
                 g_fpga_sta.status = FPGA_STA_COMBINE_TEST;
                 g_fpga_sta.step = data[3]&0x0f;
                 g_fpga_sta.result = data[3]&0xf0;
+                g_fpga_sta.result ^= 0x10;  //Giao thuc moi
                 break;
             default:
                 g_fpga_sta.status = FPGA_STA_UNKNOWN;

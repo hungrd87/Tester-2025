@@ -26,30 +26,36 @@
 // Constructor
 ComponentMapperWidget::ComponentMapperWidget(QWidget *parent)
     : QWidget(parent),
-    m_currentStage(STAGE_IDLE), // <<< Khởi tạo
-    m_simulationIndex(0),       // <<< Khởi tạo
-    m_simulationBitResult(0),   // <<< Khởi tạo
-    m_simulationForceGood(false), // <<< Khởi tạo
-    m_hasPendingCommand(false), // <<< THÊM
-    m_pendingStage(0),        // <<< THÊM
+    m_isAdmin(false), // <<< Khởi tạo
+    m_currentStage(STAGE_IDLE),       // <<< Khởi tạo
+    m_simulationIndex(0),   // <<< Khởi tạo
+    m_simulationBitResult(0), // <<< Khởi tạo
+    m_simulationForceGood(false), // <<< THÊM
+    m_hasPendingCommand(false),        // <<< THÊM
+    m_pendingStage(0),
     m_pendingResult(0)
 {
     setupUI();
     m_imageLabel->setComponentList(&m_components);
 
     m_simulationTimer = new QTimer(this);
-    m_simulationTimer->setInterval(1000); // 500 ms
+    m_simulationTimer->setInterval(500); // 500 ms
     connect(m_simulationTimer, &QTimer::timeout, this, &ComponentMapperWidget::runSimulationStep);
 }
 
 void ComponentMapperWidget::setAdmin(bool isAdmin)
 {
+    m_isAdmin = isAdmin;
+
     if (m_rightPanel) {
         m_rightPanel->setVisible(isAdmin);
-        qDebug() << "Chế độ Admin:" << (isAdmin ? "Bật (Hiện panel)" : "Tắt (Ẩn panel)");
-    } else {
-        qWarning() << "setAdmin: mS_rightPanel chưa được khởi tạo!";
     }
+
+    if (!m_currentImageBytes.isEmpty()) {
+        m_imageLabel->setDrawingEnabled(m_isAdmin);
+    }
+
+    qDebug() << "Chế độ Admin:" << (m_isAdmin ? "Bật (Hiện panel)" : "Tắt (Ẩn panel)");
 }
 
 void ComponentMapperWidget::onStageUpdate(int next_stage, int old_result)
@@ -233,6 +239,11 @@ void ComponentMapperWidget::setupUI()
     m_errorListWidget_1->header()->setSectionResizeMode(0, QHeaderView::ResizeToContents);
     m_errorListWidget_1->header()->setSectionResizeMode(1, QHeaderView::Stretch);
     m_errorListWidget_1->setRootIsDecorated(false);
+    m_errorListWidget_1->setDragEnabled(true);
+    m_errorListWidget_1->setAcceptDrops(true);
+    m_errorListWidget_1->setDropIndicatorShown(true);
+    m_errorListWidget_1->setDefaultDropAction(Qt::MoveAction);
+    m_errorListWidget_1->setDragDropMode(QAbstractItemView::InternalMove);
     m_tabWidget->addTab(m_errorListWidget_1, "Danh sách lỗi 1"); // <<< Đổi tên
 
     // 2c. Tab Danh sách lỗi 2 (MỚI)
@@ -243,6 +254,11 @@ void ComponentMapperWidget::setupUI()
     m_errorListWidget_2->header()->setSectionResizeMode(0, QHeaderView::ResizeToContents);
     m_errorListWidget_2->header()->setSectionResizeMode(1, QHeaderView::Stretch);
     m_errorListWidget_2->setRootIsDecorated(false);
+    m_errorListWidget_2->setDragEnabled(true);
+    m_errorListWidget_2->setAcceptDrops(true);
+    m_errorListWidget_2->setDropIndicatorShown(true);
+    m_errorListWidget_2->setDefaultDropAction(Qt::MoveAction);
+    m_errorListWidget_2->setDragDropMode(QAbstractItemView::InternalMove);
     m_tabWidget->addTab(m_errorListWidget_2, "Danh sách lỗi 2"); // <<< Thêm tab
 
     // 3. Thêm vào layout
@@ -273,6 +289,8 @@ void ComponentMapperWidget::setupUI()
     connect(m_saveButton, &QPushButton::clicked, this, &ComponentMapperWidget::onSaveProject);
     connect(m_loadProjectButton, &QPushButton::clicked, this, &ComponentMapperWidget::onLoadProject);
     connect(m_imageLabel, &ImageLabel::rectDrawn, this, &ComponentMapperWidget::onRectDrawn);
+    connect(m_imageLabel, &ImageLabel::componentGeometryChanged, this, &ComponentMapperWidget::onComponentGeometryChanged);
+
     connect(m_setupErrorButton, &QPushButton::clicked, this, &ComponentMapperWidget::onSetupErrorClicked);
     connect(m_tabWidget, &QTabWidget::currentChanged, this, &ComponentMapperWidget::onTabChanged);
     connect(m_componentListWidget->selectionModel(), &QItemSelectionModel::selectionChanged, this, &ComponentMapperWidget::onComponentSelectionChanged);
@@ -283,6 +301,9 @@ void ComponentMapperWidget::setupUI()
     connect(m_errorListWidget_2, &QTreeWidget::itemDoubleClicked, this, &ComponentMapperWidget::onErrorListDoubleClicked);
     connect(m_testLogWidget, &TestLogWidget::itemSelected, this, &ComponentMapperWidget::onTestLogItemSelected);
     connect(m_runTestButton, &QPushButton::clicked, this, &ComponentMapperWidget::onRunTestClicked);
+
+    connect(m_errorListWidget_1->model(), &QAbstractItemModel::rowsMoved, this, &ComponentMapperWidget::onErrorListRowsMoved);
+    connect(m_errorListWidget_2->model(), &QAbstractItemModel::rowsMoved, this, &ComponentMapperWidget::onErrorListRowsMoved);
 
     // === Khởi tạo trạng thái ban đầu ===
     setFinalStatus(0);
@@ -524,7 +545,9 @@ bool ComponentMapperWidget::performLoadProject(const QString &filePath)
 
     // 3. Cập nhật UI
     updateComponentList();
+
     m_imageLabel->update(); // Vẽ lại các hình chữ nhật đã tải
+    m_imageLabel->setDrawingEnabled(m_isAdmin);
     m_saveButton->setEnabled(true);
 
     return true;
@@ -580,8 +603,8 @@ void ComponentMapperWidget::onLoadImage()
     m_currentImageBytes = imageBytes;
     m_imageLabel->setLocalPixmap(pixmap);
 
-    // Kích hoạt chế độ vẽ ngay lập tức
-    m_imageLabel->setDrawingEnabled(true);
+    m_imageLabel->setDrawingEnabled(m_isAdmin);
+
     m_saveButton->setEnabled(true);
     QMessageBox::information(this, "Sẵn sàng", "Ảnh đã được tải. Hãy nhấn 'Thêm linh kiện' để bắt đầu vẽ.");
 }
@@ -1028,6 +1051,51 @@ void ComponentMapperWidget::onSimulationFinished()
     // (Nút Run Demo sẽ tự quản lý việc bật lại)
 }
 
+void ComponentMapperWidget::onComponentGeometryChanged(int index, const QRect &newRect)
+{
+    if (index < 0 || index >= m_components.size()) return;
+
+    // Cập nhật dữ liệu trong model
+    m_components[index].rect = newRect;
+
+    // Đánh dấu là cần lưu
+    m_saveButton->setEnabled(true);
+
+    qDebug() << "Cập nhật vị trí cho linh kiện" << index << "tới" << newRect;
+}
+
+void ComponentMapperWidget::onErrorListRowsMoved(const QModelIndex &sourceParent, int sourceStart, int sourceEnd, const QModelIndex &destinationParent, int destinationRow)
+{
+    // Chúng ta chỉ xử lý di chuyển 1 hàng, trong cùng 1 list (InternalMove)
+    Q_UNUSED(sourceEnd);
+    Q_UNUSED(sourceParent);
+    Q_UNUSED(destinationParent);
+
+    // Xác định xem model nào đã gửi tín hiệu
+    QObject* model = sender();
+    QList<ErrorInfo>* errorList = nullptr;
+
+    if (model == m_errorListWidget_1->model()) {
+        errorList = &m_errors_1;
+    } else if (model == m_errorListWidget_2->model()) {
+        errorList = &m_errors_2;
+    } else {
+        return; // Không phải list chúng ta quan tâm
+    }
+
+    // `QTreeWidget` đã tự động di chuyển item trong UI.
+    // Chúng ta cần đồng bộ hóa `QList<ErrorInfo>` (model dữ liệu).
+
+    // QList::move() xử lý đúng cả trường hợp kéo lên và kéo xuống.
+    // Nó lấy item ở `sourceStart` và chèn vào `destinationRow`.
+    errorList->move(sourceStart, destinationRow);
+
+    // Đánh dấu là cần lưu
+    m_saveButton->setEnabled(true);
+
+    qDebug() << "Đã di chuyển item trong list lỗi: từ" << sourceStart << "đến" << destinationRow;
+}
+
 void ComponentMapperWidget::updateComponentList()
 {
     m_componentListWidget->clear();
@@ -1043,6 +1111,9 @@ void ComponentMapperWidget::updateErrorList_1()
     m_errorListWidget_1->clear();
     for (const ErrorInfo &error : m_errors_1) {
         QTreeWidgetItem *item = new QTreeWidgetItem(QStringList() << error.testName << error.errorMessage);
+        Qt::ItemFlags flags = item->flags();
+        flags &= ~Qt::ItemIsDropEnabled; // Cấm thả (drop) VÀO item này
+        item->setFlags(flags);
         m_errorListWidget_1->addTopLevelItem(item);
     }
 }
@@ -1052,6 +1123,9 @@ void ComponentMapperWidget::updateErrorList_2()
     m_errorListWidget_2->clear();
     for (const ErrorInfo &error : m_errors_2) {
         QTreeWidgetItem *item = new QTreeWidgetItem(QStringList() << error.testName << error.errorMessage);
+        Qt::ItemFlags flags = item->flags();
+        flags &= ~Qt::ItemIsDropEnabled; // Cấm thả (drop) VÀO item này
+        item->setFlags(flags);
         m_errorListWidget_2->addTopLevelItem(item);
     }
 }

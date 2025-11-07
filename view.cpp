@@ -47,6 +47,8 @@ View::View(QWidget *parent)
     m_progressBar->setAlignment(Qt::AlignCenter);
     ui->statusbar->addWidget(m_progressBar,1);
 
+    ui->groupBox_3->setVisible(false);  //Không dùng trong phiên bản mới
+
     // Setup ComponentMapperWidget on page_3
     m_componentMapperWidget = new ComponentMapperWidget(ui->page_3);
     QVBoxLayout *page3Layout = new QVBoxLayout(ui->page_3);
@@ -82,7 +84,7 @@ View::View(QWidget *parent)
     connect(this, &View::signalStopTest, m_tester, &Tester::slotStopTest);
     connect(m_udp, &Udp::signalInterconnectOk, m_tester, &Tester::slotInterconnectOk);
     connect(m_udp, &Udp::signalProcessOk, m_tester, &Tester::slotProcessOk);
-    connect(m_tester, &Tester::signalStageChanged, this, &View::slotStageChanged);
+    // connect(m_tester, &Tester::signalStageChanged, this, &View::slotStageChanged);
     connect(m_tester, &Tester::signalStageUpdate, m_componentMapperWidget, &ComponentMapperWidget::onStageUpdate);
     connect(m_tester, &Tester::signalSendToArm, m_udp, &Udp::slotSendToArm);
     connect(m_tester, &Tester::signalSendToInterconnect, m_udp, &Udp::slotSendToInterconnect);
@@ -205,7 +207,6 @@ void View::currentModuleChanged(int index)
         QApplication::restoreOverrideCursor();
 
         emit signalIpChanged();
-
     }
     m_last_module = m_module;
 
@@ -332,7 +333,7 @@ void View::on_actionStart_triggered()
 
     ui->stackedWidget->setCurrentIndex(2);
     QString path = qApp->applicationDirPath() +
-                   QString("/data/errors/%1.json").arg(m_module);
+                   QString("/data/errors/%1/%2.json").arg(m_module).arg(1);
     m_componentMapperWidget->loadProjectFromPath(path);
 }
 

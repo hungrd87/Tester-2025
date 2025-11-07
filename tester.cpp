@@ -250,7 +250,8 @@ int Tester::combineTest()
                     return RESULT_GOOD;
             }
             else {
-                return g_fpga_sta.result;
+                // return g_fpga_sta.result;
+                return RESULT_BAD;
             }
         }
     }
@@ -272,8 +273,8 @@ int Tester::combineTest()
                 }
             }
             else{
-                return g_fpga_sta.result;
-                // return m_step;
+                // return g_fpga_sta.result;
+                return (1<<(m_step+1));
             }
         }
     }

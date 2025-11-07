@@ -23,10 +23,10 @@
          <string>Tester version 1.0 2023</string>
         </property>
         <property name="textFormat">
-         <enum>Qt::RichText</enum>
+         <enum>Qt::TextFormat::RichText</enum>
         </property>
         <property name="alignment">
-         <set>Qt::AlignCenter</set>
+         <set>Qt::AlignmentFlag::AlignCenter</set>
         </property>
        </widget>
       </item>
@@ -52,7 +52,7 @@ MÁY HỎI</string>
          <bool>true</bool>
         </property>
         <property name="alignment">
-         <set>Qt::AlignCenter</set>
+         <set>Qt::AlignmentFlag::AlignCenter</set>
         </property>
        </widget>
       </item>
@@ -68,7 +68,7 @@ MÁY HỎI</string>
          <bool>true</bool>
         </property>
         <property name="editTriggers">
-         <set>QAbstractItemView::DoubleClicked</set>
+         <set>QAbstractItemView::EditTrigger::DoubleClicked</set>
         </property>
         <property name="itemsExpandable">
          <bool>true</bool>
@@ -89,7 +89,17 @@ MÁY HỎI</string>
          </property>
          <item>
           <property name="text">
-           <string>Mô đun Điều khiển công suất</string>
+           <string>Mô đun Đo công suất (Thế hệ 1)</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>Mô đun Đo công suất (Thế hệ 2)</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>Mô đun Đo công suất (Thế hệ 3)</string>
           </property>
          </item>
         </item>
@@ -99,7 +109,17 @@ MÁY HỎI</string>
          </property>
          <item>
           <property name="text">
-           <string>Mô đun Mã hóa-giải mã</string>
+           <string>Mô đun Mã hóa-giải mã (Thế hệ 1)</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>Mô đun Mã hóa-giải mã (Thế hệ 2)</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>Mô đun Mã hóa-giải mã (Thế hệ 3)</string>
           </property>
          </item>
         </item>
@@ -109,17 +129,47 @@ MÁY HỎI</string>
          </property>
          <item>
           <property name="text">
-           <string>Mô đun Kiểm tra</string>
+           <string>Mô đun Kiểm tra (Thế hệ 1)</string>
           </property>
          </item>
          <item>
           <property name="text">
-           <string>Mô đun Phối hợp</string>
+           <string>Mô đun Kiểm tra (Thế hệ 2)</string>
           </property>
          </item>
          <item>
           <property name="text">
-           <string>Mô đun Máy tính xử lý</string>
+           <string>Mô đun Kiểm tra (Thế hệ 3)</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>Mô đun Phối hợp (Thế hệ 1)</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>Mô đun Phối hợp (Thế hệ 2)</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>Mô đun Phối hợp (Thế hệ 3)</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>Mô đun Máy tính xử lý (Thế hệ 1)</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>Mô đun Máy tính xử lý (Thế hệ 2)</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>Mô đun Máy tính xử lý (Thế hệ 3)</string>
           </property>
          </item>
         </item>
@@ -129,7 +179,17 @@ MÁY HỎI</string>
          </property>
          <item>
           <property name="text">
-           <string>Mô đun mã mật</string>
+           <string>Mô đun mã mật (Thế hệ 1)</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>Mô đun mã mật (Thế hệ 2)</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>Mô đun mã mật (Thế hệ 3)</string>
           </property>
          </item>
         </item>
@@ -139,12 +199,32 @@ MÁY HỎI</string>
          </property>
          <item>
           <property name="text">
-           <string>Mô đun điều khiển</string>
+           <string>Mô đun điều khiển (Thế hệ 1)</string>
           </property>
          </item>
          <item>
           <property name="text">
-           <string>Mô đun công suất</string>
+           <string>Mô đun điều khiển (Thế hệ 2)</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>Mô đun điều khiển (Thế hệ 3)</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>Mô đun công suất (Thế hệ 1)</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>Mô đun công suất (Thế hệ 2)</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>Mô đun công suất (Thế hệ 3)</string>
           </property>
          </item>
         </item>
@@ -156,10 +236,10 @@ MÁY HỎI</string>
    <item>
     <widget class="QDialogButtonBox" name="buttonBox">
      <property name="orientation">
-      <enum>Qt::Horizontal</enum>
+      <enum>Qt::Orientation::Horizontal</enum>
      </property>
      <property name="standardButtons">
-      <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
+      <set>QDialogButtonBox::StandardButton::Cancel|QDialogButtonBox::StandardButton::Ok</set>
      </property>
     </widget>
    </item>

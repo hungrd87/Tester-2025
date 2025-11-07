@@ -1,7 +1,9 @@
-#include "view.h"
-
 #include <QApplication>
 #include "udp_def.h"
+
+#include "view.h"
+#include "dialog.h"
+
 
 void myMessageOutput(QtMsgType type, const QMessageLogContext&, const QString &msg);
 void getParams();
@@ -24,7 +26,9 @@ int main(int argc, char *argv[])
     getParams();
 
     View w;
+    // Dialog w;
     w.show();
+
     return a.exec();
 }
 
