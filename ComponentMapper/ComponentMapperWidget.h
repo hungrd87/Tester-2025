@@ -51,8 +51,11 @@ private slots:
     void onSimulationFinished();
 
     void onComponentGeometryChanged(int index, const QRect &newRect);
-    void onErrorListRowsMoved(const QModelIndex &sourceParent, int sourceStart, int sourceEnd,
-                              const QModelIndex &destinationParent, int destinationRow);
+    // void onErrorListRowsMoved(const QModelIndex &sourceParent, int sourceStart, int sourceEnd,
+    //                           const QModelIndex &destinationParent, int destinationRow);
+
+    void onRowsAboutToBeRemoved(const QModelIndex &parent, int start, int end);
+    void onRowsInserted(const QModelIndex &parent, int start, int end);
 
 private:
     void setupUI();
@@ -102,6 +105,7 @@ private:
     bool m_isAdmin;
 
     STAGE_ENUM m_currentStage;
+    bool m_isDragDropping;
 
     QTimer *m_simulationTimer;
     QList<ErrorInfo> m_simulationList;
@@ -110,6 +114,7 @@ private:
     bool m_simulationForceGood;   // Dùng cho Stage_Good
     STAGE_ENUM m_simulationOriginStage; // Stage nào đã kích hoạt mô phỏng
     QString m_simulationDataType; // "error_1" hay "error_2"
+    bool m_simulationAllFailedSoFar;
 
     bool m_hasPendingCommand;
     int m_pendingStage;

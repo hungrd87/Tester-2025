@@ -16,6 +16,7 @@ Tester::Tester(QObject *parent)
     resetTest();
 
     m_stage = STAGE_IDLING;
+    m_last_cs_phanxa = 0;
 
     startTimer(500);
 }
@@ -79,6 +80,9 @@ void Tester::timerEvent(QTimerEvent *event)
         emit signalSendToInterconnect();
 }
 
+#define TIMEOUT_FPGA_PREPARE   20
+#define TIMEOUT_FPGA_TEST   8
+
 void Tester::testLoop()
 {
     //Process Requests
@@ -101,6 +105,7 @@ void Tester::testLoop()
 
     //One Loop
     int result = RESULT_NONE;
+    static unsigned int cnt = 0;
     switch (m_stage) {
     case STAGE_IDLING:
         resetTest();
@@ -113,55 +118,72 @@ void Tester::testLoop()
         }
         break;
     case STAGE_IDLE:    //Waiting for START
+        cnt = 0;
         break;
     case STAGE_START:
         emit signalStageChanged(m_stage);
-        QThread::sleep(2);
-        m_stage = STAGE_ARM_PREPARE;
-        emit signalStageUpdate(m_stage);
-        qInfo() << "Enter ARM_PREPARE";
+        // QThread::sleep(2);
+        if(++cnt>4) {
+            m_stage = STAGE_ARM_PREPARE;
+            emit signalStageUpdate(m_stage);
+            qInfo() << "Enter ARM_PREPARE";
+            cnt = 0;
+        }
         break;
     case STAGE_ARM_PREPARE:
         if(prepareArm()){
-            QThread::sleep(2);
-            m_stage = STAGE_FPGA_PREPARE;
-            emit signalStageUpdate(m_stage);
-            g_fpga_cmd.cmd0 = FPGA_CMD_PREPARE;
-            g_fpga_cmd.cmd1 = m_module;
-            qInfo() << "Enter FPGA_PREPARE";
+            // QThread::sleep(2);
+            if(++cnt>4){
+                m_stage = STAGE_FPGA_PREPARE;
+                emit signalStageUpdate(m_stage);
+                g_fpga_cmd.cmd0 = FPGA_CMD_PREPARE;
+                g_fpga_cmd.cmd1 = m_module;
+                qInfo() << "Enter FPGA_PREPARE";
+                cnt = 0;
+            }
         }
         break;
     case STAGE_FPGA_PREPARE:
         if(g_fpga_sta.status==FPGA_STA_READY){
-            QThread::sleep(2);
-            m_stage = STAGE_FPGA_READY;
-            qInfo() << "Enter FPGA_READY";
+            // QThread::sleep(2);
+            if(++cnt>4){
+                m_stage = STAGE_FPGA_READY;
+                qInfo() << "Enter FPGA_READY";
+                cnt = 0;
+            }
         }
         break;
     case STAGE_FPGA_READY:
-        QThread::sleep(2);
-        m_stage = STAGE_FPGA_TEST;
-        emit signalStageUpdate(m_stage);
-        g_fpga_cmd.cmd0 = FPGA_CMD_FPGA_TEST;
-        g_fpga_sta.result = RESULT_NONE;
-        qInfo() << "Enter FPGA_TEST";
+        // QThread::sleep(2);
+        if(++cnt>TIMEOUT_FPGA_PREPARE){
+            m_stage = STAGE_FPGA_TEST;
+            emit signalStageUpdate(m_stage);
+            g_fpga_cmd.cmd0 = FPGA_CMD_FPGA_TEST;
+            g_fpga_sta.result = RESULT_NONE;
+            qInfo() << "Enter FPGA_TEST";
+            cnt = 0;
+        }
         break;
     case STAGE_FPGA_TEST:
         if(g_fpga_sta.status == FPGA_STA_FPGA_TEST){
-            QThread::sleep(2);
-            result = g_fpga_sta.result;
-            if(result==RESULT_GOOD){
-                m_step = 0;
-                m_timeout = 0;
-                m_stage = STAGE_COMBINE_TEST;
-                emit signalStageUpdate(m_stage);
-                g_fpga_cmd.cmd0 = FPGA_CMD_COMBINE_TEST;
-                g_fpga_cmd.cmd1 = m_step;
-                qInfo() << "Enter COMBINE_TEST";
-            }
-            else {
-                m_stage = STAGE_BAD;
-                emit signalStageUpdate(m_stage, result);
+            // QThread::sleep(2);
+            if(++cnt>TIMEOUT_FPGA_TEST){
+                result = g_fpga_sta.result;
+                if(result==RESULT_GOOD){
+                    m_step = 0;
+                    m_timeout = 0;
+                    m_stage = STAGE_COMBINE_TEST;
+                    m_last_cs_phanxa = g_arm_sta.csphanxa;
+                    emit signalStageUpdate(m_stage);
+                    g_fpga_cmd.cmd0 = FPGA_CMD_COMBINE_TEST;
+                    g_fpga_cmd.cmd1 = m_step;
+                    qInfo() << "Enter COMBINE_TEST";
+                }
+                else {
+                    m_stage = STAGE_BAD;
+                    emit signalStageUpdate(m_stage, result);
+                }
+                cnt = 0;
             }
         }
         break;
@@ -242,9 +264,9 @@ int Tester::combineTest()
         if(g_fpga_sta.status == FPGA_STA_COMBINE_TEST){
             QThread::sleep(3);
             if (g_fpga_sta.result == RESULT_GOOD){
-                int csphat = g_arm_sta.csphat;
-                // int csphanxa = g_arm_sta.csphanxa;
-                if (csphat<g_cs_offset)
+                // int csphat = g_arm_sta.csphat;
+                int csphanxa = g_arm_sta.csphanxa;
+                if (m_last_cs_phanxa!=0 || csphanxa<=0 || csphanxa>150)
                     return RESULT_BAD;  //MAX_ERROR + 1
                 else
                     return RESULT_GOOD;

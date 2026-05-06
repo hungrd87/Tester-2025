@@ -38,6 +38,8 @@ FORMS += \
     dialog.ui \
     view.ui
 
+RC_ICON = $$PWD/Tester.ico
+
 RC_FILE = Tester.rc
 
 RESOURCES += \

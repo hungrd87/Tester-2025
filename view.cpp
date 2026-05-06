@@ -48,6 +48,7 @@ View::View(QWidget *parent)
     ui->statusbar->addWidget(m_progressBar,1);
 
     ui->groupBox_3->setVisible(false);  //Không dùng trong phiên bản mới
+    m_progressBar->setVisible(false);   //Không dùng trong phiên bản mới
 
     // Setup ComponentMapperWidget on page_3
     m_componentMapperWidget = new ComponentMapperWidget(ui->page_3);
@@ -176,6 +177,11 @@ void View::loadStep()
         ui->pushButtonPrev->setEnabled(true);
         ui->pushButtonNext->setEnabled(true);
     }
+}
+
+void View::setAdmin(bool is_admin)
+{
+    m_componentMapperWidget->setAdmin(is_admin);
 }
 
 void View::firstConfig()

@@ -20,7 +20,7 @@
       <item>
        <widget class="QLabel" name="label_2">
         <property name="text">
-         <string>Tester version 1.0 2023</string>
+         <string>Phiên bản 2.0.1 (2025)</string>
         </property>
         <property name="textFormat">
          <enum>Qt::TextFormat::RichText</enum>

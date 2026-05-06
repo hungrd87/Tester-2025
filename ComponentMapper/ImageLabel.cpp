@@ -229,7 +229,7 @@ void ImageLabel::paintEvent(QPaintEvent *event)
 
             // 3c. === THÊM MỚI: Vẽ tay nắm (handles) ===
             // Chỉ vẽ nếu chọn 1 item VÀ không đang vẽ mới
-            if (m_highlightedIndices.count() == 1 && !m_isDrawing) {
+            if (m_highlightedIndices.count() == 1 && !m_isDrawing && m_drawingEnabled) {
                 QPen handlePen(QColor(255, 255, 255, 150), 1);
                 QBrush handleBrush(QColor(255, 0, 0, 200)); // Đỏ bán trong
                 painter.setPen(handlePen);
@@ -350,7 +350,7 @@ ImageLabel::DragMode ImageLabel::getDragMode(const QPoint &labelPos) const
     // 1. Chỉ chọn 1 item
     // 2. Không đang trong chế độ vẽ mới
     // 3. Ảnh đã được tải
-    if (m_highlightedIndices.count() != 1 || m_isDrawing || m_pixmap.isNull()) {
+    if (m_highlightedIndices.count() != 1 || m_isDrawing || m_pixmap.isNull() || !m_drawingEnabled) {
         return DragMode::None;
     }
 

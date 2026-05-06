@@ -43,6 +43,7 @@ private:
     int m_final;
     bool m_interconnect_ok, m_process_ok;
     int m_stage;
+    int m_last_cs_phanxa; //Sử dụng cs_phanxa để đánh giá ADC
 };
 
 #endif // TESTER_H

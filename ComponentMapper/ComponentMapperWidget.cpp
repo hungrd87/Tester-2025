@@ -22,20 +22,24 @@
 #include <QHeaderView>
 #include <memory>
 #include <QDebug>
+#include <QSignalBlocker>
 
 // Constructor
 ComponentMapperWidget::ComponentMapperWidget(QWidget *parent)
     : QWidget(parent),
     m_isAdmin(false), // <<< Khởi tạo
     m_currentStage(STAGE_IDLE),       // <<< Khởi tạo
-    m_simulationIndex(0),   // <<< Khởi tạo
-    m_simulationBitResult(0), // <<< Khởi tạo
-    m_simulationForceGood(false), // <<< THÊM
-    m_hasPendingCommand(false),        // <<< THÊM
+    m_isDragDropping(false),   // <<< Khởi tạo
+    m_simulationIndex(0), // <<< Khởi tạo
+    m_simulationBitResult(0), // <<< THÊM
+    m_simulationForceGood(false),        // <<< THÊM
+    m_hasPendingCommand(false),
     m_pendingStage(0),
     m_pendingResult(0)
 {
     setupUI();
+    setAdmin(m_isAdmin);
+
     m_imageLabel->setComponentList(&m_components);
 
     m_simulationTimer = new QTimer(this);
@@ -84,6 +88,7 @@ void ComponentMapperWidget::onStageUpdate(int next_stage, int old_result)
     // Xử lý các trạng thái KHÔNG chạy mô phỏng
     switch (newStage) {
     case STAGE_IDLE:
+        m_testLogWidget->clearLog();
         m_testLogWidget->setTestProgressText("Trạng thái chờ");
         m_testLogWidget->resetTestProgress();
         setFinalStatus(0);
@@ -98,17 +103,17 @@ void ComponentMapperWidget::onStageUpdate(int next_stage, int old_result)
         break;
 
     case STAGE_FPGA_PREPARE:
-        m_testLogWidget->setTestProgressText("Hoàn tất phần cứng...");
         m_testLogWidget->setTestProgress(65);
         break;
 
     case STAGE_FPGA_TEST:
-        m_testLogWidget->setTestProgress(0);
-        m_testLogWidget->setTestProgressText("Kiểm tra lần lượt...");
+        m_testLogWidget->setTestProgress(100);
+        m_testLogWidget->setTestProgressText("Hoàn tất phần cứng...");
         break;
 
         // Xử lý các trạng thái CHẠY MÔ PHỎNG
     case STAGE_COMBINE_TEST:
+        m_testLogWidget->setTestProgressText("Kiểm tra lần lượt...");
         // Yêu cầu: old_result = 0, chạy List 1 báo TỐT
         if (m_currentStage == STAGE_FPGA_TEST) {
             qDebug() << "Logic: FPGA_Test -> Combined_Test (List 1 PASS)";
@@ -131,6 +136,7 @@ void ComponentMapperWidget::onStageUpdate(int next_stage, int old_result)
     case STAGE_BAD:
         // Yêu cầu: Kết thúc HỎNG
         if (m_currentStage == STAGE_FPGA_TEST) {
+            m_testLogWidget->setTestProgressText("Kiểm tra lần lượt...");
             // Chạy List 1, dùng old_result
             qDebug() << "Logic: FPGA_Test -> Bad (List 1 FAIL)";
             startTestSimulation(m_errors_1, old_result, false, newStage, "error_1");
@@ -302,8 +308,26 @@ void ComponentMapperWidget::setupUI()
     connect(m_testLogWidget, &TestLogWidget::itemSelected, this, &ComponentMapperWidget::onTestLogItemSelected);
     connect(m_runTestButton, &QPushButton::clicked, this, &ComponentMapperWidget::onRunTestClicked);
 
-    connect(m_errorListWidget_1->model(), &QAbstractItemModel::rowsMoved, this, &ComponentMapperWidget::onErrorListRowsMoved);
-    connect(m_errorListWidget_2->model(), &QAbstractItemModel::rowsMoved, this, &ComponentMapperWidget::onErrorListRowsMoved);
+    // connect(m_errorListWidget_1->model(), &QAbstractItemModel::rowsMoved, this, &ComponentMapperWidget::onErrorListRowsMoved);
+    // connect(m_errorListWidget_2->model(), &QAbstractItemModel::rowsMoved, this, &ComponentMapperWidget::onErrorListRowsMoved);
+
+    connect(m_errorListWidget_1->model(),
+            SIGNAL(rowsAboutToBeRemoved(const QModelIndex&,int,int)),
+            this,
+            SLOT(onRowsAboutToBeRemoved(const QModelIndex&,int,int)));
+    connect(m_errorListWidget_1->model(),
+            SIGNAL(rowsInserted(const QModelIndex&,int,int)),
+            this,
+            SLOT(onRowsInserted(const QModelIndex&,int,int)));
+
+    connect(m_errorListWidget_2->model(),
+            SIGNAL(rowsAboutToBeRemoved(const QModelIndex&,int,int)),
+            this,
+            SLOT(onRowsAboutToBeRemoved(const QModelIndex&,int,int)));
+    connect(m_errorListWidget_2->model(),
+            SIGNAL(rowsInserted(const QModelIndex&,int,int)),
+            this,
+            SLOT(onRowsInserted(const QModelIndex&,int,int)));
 
     // === Khởi tạo trạng thái ban đầu ===
     setFinalStatus(0);
@@ -565,6 +589,7 @@ void ComponentMapperWidget::startTestSimulation(const QList<ErrorInfo> &errorLis
     m_simulationOriginStage = originStage; // Lưu lại stage đã GỌI ta
     m_simulationDataType = dataType;
 
+    m_simulationAllFailedSoFar = true;
     m_testLogWidget->setTestProgress(0);
 
     // Nếu list trống, gọi 'Hoàn tất' ngay lập tức
@@ -787,8 +812,8 @@ void ComponentMapperWidget::onErrorListSelectionChanged()
 void ComponentMapperWidget::onErrorListDoubleClicked(QTreeWidgetItem *item, int column) // <<< THAY ĐỔI
 {
     Q_UNUSED(column);
+    if (!item) return;
 
-    // === THAY ĐỔI: Dùng sender() để xác định list ===
     QTreeWidget* listWidget = qobject_cast<QTreeWidget*>(sender());
     if (!listWidget) return;
 
@@ -804,10 +829,18 @@ void ComponentMapperWidget::onErrorListDoubleClicked(QTreeWidgetItem *item, int 
     } else {
         return;
     }
-    // ============================================
 
-    int index = listWidget->indexOfTopLevelItem(item);
-    if (index < 0 || index >= errorList->size()) return;
+    // === THAY ĐỔI LỚN: Lấy index từ "thẻ" UserRole ===
+    // 'index' bây giờ là index của DATA, bất kể item ở vị trí nào trên UI
+    int index = item->data(0, Qt::UserRole).toInt();
+    // int index = listWidget->indexOfTopLevelItem(item); // <<< ĐÂY LÀ DÒNG GÂY LỖI
+    // ===============================================
+
+    if (index < 0 || index >= errorList->size()) {
+        qWarning() << "Lỗi đồng bộ: item trỏ đến index" << index << "không hợp lệ.";
+        updateListFunc(); // Cập nhật lại list để sửa lỗi
+        return;
+    }
 
     ErrorInfo &error = (*errorList)[index];
 
@@ -867,6 +900,17 @@ void ComponentMapperWidget::onTabChanged(int index)
 
 void ComponentMapperWidget::onTestLogItemSelected(QVariantMap highlightData)
 {
+    if (highlightData.isEmpty()) {
+        m_imageLabel->setHighlightedIndices({});
+
+        // (Tùy chọn: Xóa lựa chọn trong các tab)
+        // m_componentListWidget->clearSelection();
+        // m_errorListWidget_1->clearSelection();
+        // m_errorListWidget_2->clearSelection();
+
+        return; // Dừng
+    }
+
     QString type = highlightData.value("type").toString();
     QList<int> indices;
     QVariantList vList = highlightData.value("indices").toList();
@@ -898,7 +942,8 @@ void ComponentMapperWidget::onRunTestClicked()
 
     // Demo: Giả sử List 1 có lỗi ở item 0 và 2 (bit 0, bit 2)
     // old_result = 0b101 = 5
-    int demoResultList1 = 5;
+    // int demoResultList1 = 5;
+    int demoResultList1 = 0x34;
     long long delayList1 = (m_errors_1.size() + 2) * 500; // Ước tính thời gian chạy List 1
 
     // Demo: Giả sử List 2 có lỗi ở item 1 (bit 1)
@@ -926,19 +971,25 @@ void ComponentMapperWidget::onRunTestClicked()
     });
     totalDelay += stepDelay;
 
+    // // 4. (Time 750ms) - Bắt đầu Test
+    // QTimer::singleShot(totalDelay, this, [=]() {
+    //     onStageUpdate(STAGE_FPGA_TEST, 0);
+    // });
+    // totalDelay += stepDelay;
+
+    // // 5. (Time 1000ms) - Chạy Test kết hợp (List 1)
+    // // (Hàm này sẽ bắt đầu m_simulationTimer riêng của nó)
+    // QTimer::singleShot(totalDelay, this, [=]() {
+    //     qDebug() << "Demo: Bắt đầu Stage_Combined_Test (List 1) với kết quả =" << demoResultList1;
+    //     onStageUpdate(STAGE_COMBINE_TEST, demoResultList1);
+    // });
+    // totalDelay += delayList1; // Chờ cho List 1 chạy xong
+
     // 4. (Time 750ms) - Bắt đầu Test
     QTimer::singleShot(totalDelay, this, [=]() {
-        onStageUpdate(STAGE_FPGA_TEST, 0);
+        onStageUpdate(STAGE_FPGA_TEST, demoResultList1);
     });
     totalDelay += stepDelay;
-
-    // 5. (Time 1000ms) - Chạy Test kết hợp (List 1)
-    // (Hàm này sẽ bắt đầu m_simulationTimer riêng của nó)
-    QTimer::singleShot(totalDelay, this, [=]() {
-        qDebug() << "Demo: Bắt đầu Stage_Combined_Test (List 1) với kết quả =" << demoResultList1;
-        onStageUpdate(STAGE_COMBINE_TEST, demoResultList1);
-    });
-    totalDelay += delayList1; // Chờ cho List 1 chạy xong
 
     // 6. (Time 1000ms + delayList1) - Báo HỎNG (để kích hoạt List 2)
     // (Hàm này sẽ bắt đầu m_simulationTimer cho List 2)
@@ -946,7 +997,8 @@ void ComponentMapperWidget::onRunTestClicked()
         qDebug() << "Demo: Bắt đầu Stage_Bad (List 2) với kết quả =" << demoResultList2;
         // Vì trạng thái trước đó là Stage_Combined_Test,
         // lệnh này sẽ kích hoạt kiểm tra Danh sách lỗi 2
-        onStageUpdate(STAGE_BAD, demoResultList2);
+        onStageUpdate(STAGE_BAD, demoResultList1);
+        // onStageUpdate(STAGE_BAD, demoResultList2);
     });
     totalDelay += delayList2; // Chờ cho List 2 chạy xong
 
@@ -959,16 +1011,33 @@ void ComponentMapperWidget::onRunTestClicked()
 
 void ComponentMapperWidget::runSimulationStep()
 {
-    // 1. Điều kiện dừng: Đã chạy hết danh sách
-    if (m_simulationIndex >= m_simulationList.size()) {
+    int totalItems = m_simulationList.size();
+    bool isList1 = (m_simulationDataType == "error_1");
+
+    // === 1. Xử lý logic N-1 (Chỉ cho List 1) ===
+    if (isList1 && totalItems > 0 && m_simulationIndex == (totalItems - 1)) // Đây là item N
+    {
+        if (m_simulationAllFailedSoFar == false) // (Nghĩa là 1 item Tốt)
+        {
+            qDebug() << "List 1 (N-1): Đã có item Tốt. Bỏ qua item N.";
+            m_simulationTimer->stop();
+            onSimulationFinished(); // Hoàn tất sớm
+            return;
+        }
+        // (Nếu 'm_simulationAllFailedSoFar' là TRUE, tiếp tục chạy item N)
+        qDebug() << "List 1 (N-1): Tất cả đều Lỗi. Tiếp tục chạy item N.";
+    }
+
+    // === 2. Xử lý dừng (Stop Condition) ===
+    if (m_simulationIndex >= totalItems)
+    {
         m_simulationTimer->stop();
-        onSimulationFinished(); // Gọi hàm xử lý kết thúc
+        onSimulationFinished();
         return;
     }
 
-    // 3. Xử lý bước hiện tại (Logic cũ không đổi)
+    // === 3. Lấy item và chạy (Run Step) ===
     const ErrorInfo &error = m_simulationList[m_simulationIndex];
-
     QVariantMap data;
     data["type"] = m_simulationDataType;
     data["indices"] = QVariantList{m_simulationIndex};
@@ -976,24 +1045,48 @@ void ComponentMapperWidget::runSimulationStep()
     QString stepName = error.testName;
     int row = m_testLogWidget->addTestStep(stepName, data);
 
-    // 4. Quyết định kết quả (Pass/Fail) (Logic cũ không đổi)
+    m_testLogWidget->setTestProgressText(QString("Đang kiểm tra: %1").arg(stepName));
+
+    // === 4. Quyết định Pass/Fail ===
     bool pass;
-    if (m_simulationForceGood) {
+    QString resultDetail;
+
+    // 4a. Logic ép Hỏng cho item N (nếu N-1 đều Hỏng)
+    if (isList1 && m_simulationIndex == (totalItems - 1) && m_simulationAllFailedSoFar == true)
+    {
+        pass = false;
+        resultDetail = error.errorMessage.isEmpty() ? "Lỗi tổng hợp" : error.errorMessage;
+    }
+    // 4b. Logic ép Tốt (dùng cho Stage_Combined_Test)
+    else if (m_simulationForceGood)
+    {
         pass = true;
-    } else {
+        resultDetail = "Tốt";
+    }
+    // 4c. Logic chuẩn (dùng bitResult)
+    else
+    {
         bool isFail = (m_simulationBitResult >> m_simulationIndex) & 1;
         pass = !isFail;
+        resultDetail = pass ? "Tốt" : error.errorMessage;
     }
 
-    QString resultDetail = pass ? "Tốt" : error.errorMessage;
+    // === 5. Cập nhật cờ N-1 ===
+    // (Chỉ cập nhật nếu là List 1 VÀ đang chạy trong (N-1) items)
+    if (isList1 && m_simulationIndex < (totalItems - 1))
+    {
+        if (pass) {
+            m_simulationAllFailedSoFar = false; // Phát hiện 1 item Tốt
+        }
+    }
 
-    // 5. Cập nhật UI (Logic cũ không đổi)
+    // === 6. Cập nhật UI ===
     m_testLogWidget->updateTestStep(row, pass, resultDetail);
-    int progress = ((m_simulationIndex + 1) * 100) / m_simulationList.size();
+    int progress = ((m_simulationIndex + 1) * 100) / totalItems;
     m_testLogWidget->setTestProgress(progress);
-    // m_testLogWidget->setTestProgressText(QString("Đã kiểm tra: %1").arg(stepName));
+    m_testLogWidget->setTestProgressText(QString("Đã kiểm tra: %1").arg(stepName));
 
-    // 6. Chuẩn bị cho bước tiếp theo
+    // === 7. Chuẩn bị cho bước tiếp theo ===
     m_simulationIndex++;
 }
 
@@ -1001,29 +1094,38 @@ void ComponentMapperWidget::onSimulationFinished()
 {
     qDebug() << "Hoàn tất mô phỏng cho stage:" << m_simulationOriginStage;
 
-    // Hiển thị thông báo trong log
-    // m_testLogWidget->addTestStep("Hoàn tất", QVariantMap());
-    // m_testLogWidget->setTestProgress(100);
-    // m_testLogWidget->setTestProgressText("Hoàn tất.");
+    bool isList1 = (m_simulationDataType == "error_1");
+    int totalItems = m_simulationList.size();
 
-    // === Chỉ đặt trạng thái CUỐI CÙNG nếu stage là 'Good' hoặc 'Bad' ===
+    // === THAY ĐỔI: Kiểm tra xem có dừng sớm không ===
+    bool stoppedEarly = (isList1 && m_simulationIndex < totalItems);
 
+    if (!stoppedEarly)
+    {
+        // Hoàn thành bình thường
+        // m_testLogWidget->addTestStep("Hoàn tất", QVariantMap());
+        m_testLogWidget->setTestProgress(100);
+        m_testLogWidget->setTestProgressText("Hoàn tất");
+    }
+    else
+    {
+        // Dừng sớm (do List 1 có item Tốt)
+        // m_testLogWidget->addTestStep("Dừng (phát hiện item Tốt)", QVariantMap());
+        m_testLogWidget->setTestProgressText("Hoàn tất");
+        // (Không set 100% vì chưa chạy hết)
+        m_testLogWidget->setTestProgress(100);//Vẫn set 100%
+    }
+
+    // === Logic Quyết định TỐT/HỎNG (không đổi) ===
     if (m_simulationOriginStage == STAGE_GOOD) {
-        // Chạy List 2 (force good) xong -> Báo TỐT
         setFinalStatus(1); // TỐT
-        m_testLogWidget->setTestProgressText("Hoàn tất.");
     }
     else if (m_simulationOriginStage == STAGE_BAD) {
-        // Chạy List 1 (có lỗi) XONG -> Báo HỎNG
-        // hoặc Chạy List 2 (có lỗi) XONG -> Báo HỎNG
         setFinalStatus(2); // HỎNG
-        m_testLogWidget->setTestProgressText("Hoàn tất.");
     }
     else if (m_simulationOriginStage == STAGE_COMBINE_TEST) {
-        // Chạy List 1 (force good) xong -> KHÔNG làm gì.
-        // Chờ lệnh Stage_Good hoặc Stage_Bad tiếp theo.
+        // (Dừng sớm hay không cũng không set status)
         qDebug() << "Mô phỏng (List 1 PASS) hoàn tất. Chờ lệnh tiếp theo...";
-        m_testLogWidget->setTestProgressText("Kiểm tra kết hợp...");
     }
 
     // === THÊM MỚI: Xử lý lệnh đang chờ ===
@@ -1064,37 +1166,155 @@ void ComponentMapperWidget::onComponentGeometryChanged(int index, const QRect &n
     qDebug() << "Cập nhật vị trí cho linh kiện" << index << "tới" << newRect;
 }
 
-void ComponentMapperWidget::onErrorListRowsMoved(const QModelIndex &sourceParent, int sourceStart, int sourceEnd, const QModelIndex &destinationParent, int destinationRow)
+void ComponentMapperWidget::onRowsAboutToBeRemoved(const QModelIndex &parent, int start, int end)
 {
-    // Chúng ta chỉ xử lý di chuyển 1 hàng, trong cùng 1 list (InternalMove)
-    Q_UNUSED(sourceEnd);
-    Q_UNUSED(sourceParent);
-    Q_UNUSED(destinationParent);
+    // Khi người dùng bắt đầu KÉO, 'remove' được gọi.
+    // Chúng ta chỉ cần đặt cờ.
+    Q_UNUSED(parent);
+    Q_UNUSED(start);
+    Q_UNUSED(end);
 
-    // Xác định xem model nào đã gửi tín hiệu
     QObject* model = sender();
+
+    // Đảm bảo đây là model chúng ta quan tâm
+    if (model == m_errorListWidget_1->model() || model == m_errorListWidget_2->model()) {
+        // Chỉ đặt cờ nếu đây là thao tác kéo (drag)
+        QTreeWidget* listWidget = (model == m_errorListWidget_1->model()) ? m_errorListWidget_1 : m_errorListWidget_2;
+
+        // Kiểm tra xem có phải 'InternalMove' đang diễn ra không
+        if(listWidget->dragDropMode() == QAbstractItemView::InternalMove) {
+            m_isDragDropping = true;
+            qDebug() << "Bắt đầu Drag-Drop (Remove)...";
+        }
+    }
+}
+
+void ComponentMapperWidget::onRowsInserted(const QModelIndex &parent, int start, int end)
+{
+    // (Chúng ta không cần các tham số này)
+    Q_UNUSED(parent); Q_UNUSED(start); Q_UNUSED(end);
+
+    // === BƯỚC 1: KIỂM TRA CỜ ===
+    // Nếu cờ này là 'false', đây là 'add' do code (ví dụ: load project)
+    // Chúng ta phải bỏ qua nó.
+    if (!m_isDragDropping) {
+        return; // Bỏ qua
+    }
+
+    // === BƯỚC 2: RESET CỜ ===
+    // (Thao tác 'move' đã hoàn tất, reset cờ)
+    m_isDragDropping = false;
+    qDebug() << "Kết thúc Drag-Drop (Insert). Đang đồng bộ hóa...";
+
+    // === BƯỚC 3: Đồng bộ hóa (Logic v11/v16) ===
+
+    // 3a. Xác định list nào đã di chuyển
+    QObject* model = sender();
+    QTreeWidget* listWidget = nullptr;
     QList<ErrorInfo>* errorList = nullptr;
 
     if (model == m_errorListWidget_1->model()) {
+        listWidget = m_errorListWidget_1;
         errorList = &m_errors_1;
     } else if (model == m_errorListWidget_2->model()) {
+        listWidget = m_errorListWidget_2;
         errorList = &m_errors_2;
     } else {
-        return; // Không phải list chúng ta quan tâm
+        return;
     }
 
-    // `QTreeWidget` đã tự động di chuyển item trong UI.
-    // Chúng ta cần đồng bộ hóa `QList<ErrorInfo>` (model dữ liệu).
+    // 3b. Đọc UI -> Xây dựng lại Data
+    QList<ErrorInfo> newOrderedList;
+    for (int i = 0; i < listWidget->topLevelItemCount(); ++i) {
+        QTreeWidgetItem* item = listWidget->topLevelItem(i);
+        int originalDataIndex = item->data(0, Qt::UserRole).toInt();
+        if (originalDataIndex >= 0 && originalDataIndex < errorList->size()) {
+            newOrderedList.append((*errorList)[originalDataIndex]);
+        }
+    }
 
-    // QList::move() xử lý đúng cả trường hợp kéo lên và kéo xuống.
-    // Nó lấy item ở `sourceStart` và chèn vào `destinationRow`.
-    errorList->move(sourceStart, destinationRow);
+    // 3c. Thay thế Data cũ
+    *errorList = newOrderedList;
 
-    // Đánh dấu là cần lưu
+    // 3d. Cập nhật lại "thẻ" UserRole
+    // (KHÔNG gọi updateListFunc() - để tránh vòng lặp)
+    for (int i = 0; i < listWidget->topLevelItemCount(); ++i) {
+        listWidget->topLevelItem(i)->setData(0, Qt::UserRole, i);
+    }
+
     m_saveButton->setEnabled(true);
-
-    qDebug() << "Đã di chuyển item trong list lỗi: từ" << sourceStart << "đến" << destinationRow;
 }
+
+// void ComponentMapperWidget::onErrorListRowsMoved(const QModelIndex &sourceParent, int sourceStart, int sourceEnd, const QModelIndex &destinationParent, int destinationRow)
+// {
+//     // Chúng ta không cần các tham số này, vì chúng ta sẽ đọc lại toàn bộ
+//     Q_UNUSED(sourceParent); Q_UNUSED(sourceStart); Q_UNUSED(sourceEnd);
+//     Q_UNUSED(destinationParent); Q_UNUSED(destinationRow);
+
+//     qDebug() << "onErrorListRowsMoved";
+
+//     // 1. Xác định list nào đã di chuyển
+//     QObject* model = sender();
+//     QTreeWidget* listWidget = nullptr;
+//     QList<ErrorInfo>* errorList = nullptr;
+//     std::function<void()> updateListFunc;
+
+//     if (model == m_errorListWidget_1->model()) {
+//         listWidget = m_errorListWidget_1;
+//         errorList = &m_errors_1;
+//         updateListFunc = [this](){ updateErrorList_1(); };
+//     } else if (model == m_errorListWidget_2->model()) {
+//         listWidget = m_errorListWidget_2;
+//         errorList = &m_errors_2;
+//         updateListFunc = [this](){ updateErrorList_2(); };
+//     } else {
+//         return;
+//     }
+
+//     // === Logic mới: Xây dựng lại Data từ UI ===
+
+//     QList<ErrorInfo> newOrderedList;
+//     // Tạo một bản sao của Data cũ để tìm kiếm (rất quan trọng)
+//     QList<ErrorInfo> oldListCopy = *errorList;
+
+//     // 2. Duyệt qua TreeWidget (UI) theo thứ tự MỚI
+//     for (int i = 0; i < listWidget->topLevelItemCount(); ++i) {
+//         QTreeWidgetItem* item = listWidget->topLevelItem(i);
+//         QString uiTestName = item->text(0);
+//         QString uiErrorMsg = item->text(1);
+
+//         // 3. Tìm item này trong bản sao của Data cũ
+//         int foundIndex = -1;
+//         for(int j = 0; j < oldListCopy.size(); ++j) {
+//             // (Chúng ta tìm dựa trên nội dung text)
+//             if (oldListCopy[j].testName == uiTestName && oldListCopy[j].errorMessage == uiErrorMsg) {
+//                 foundIndex = j;
+//                 break;
+//             }
+//         }
+
+//         if (foundIndex != -1) {
+//             // 4. Thêm Data (từ bản sao) vào list mới
+//             // và XÓA nó khỏi bản sao (để xử lý trường hợp trùng lặp)
+//             newOrderedList.append(oldListCopy.takeAt(foundIndex));
+//             qDebug() << "Đã tìm được index at: " << foundIndex;
+//         } else {
+//             // Trường hợp này không nên xảy ra nếu UI và Data khớp
+//             qWarning() << "Lỗi đồng bộ khi kéo: không tìm thấy item" << uiTestName;
+//         }
+//     }
+
+//     // 5. Thay thế hoàn toàn danh sách Data CŨ bằng danh sách MỚI
+//     // (Đây là bước cập nhật vĩnh viễn m_errors_1/2)
+//     *errorList = newOrderedList;
+
+//     // 6. Xây dựng lại UI để reset các "thẻ" (UserRole)
+//     // (Điều này đảm bảo Double-Click hoạt động)
+//     updateListFunc();
+
+//     m_saveButton->setEnabled(true);
+//     qDebug() << "Đã đồng bộ lại Data theo UI (Fix v11).";
+// }
 
 void ComponentMapperWidget::updateComponentList()
 {
@@ -1109,11 +1329,18 @@ void ComponentMapperWidget::updateComponentList()
 void ComponentMapperWidget::updateErrorList_1()
 {
     m_errorListWidget_1->clear();
-    for (const ErrorInfo &error : m_errors_1) {
+    for (int i = 0; i < m_errors_1.size(); ++i) { // Dùng vòng lặp 'i'
+        const ErrorInfo &error = m_errors_1[i];
         QTreeWidgetItem *item = new QTreeWidgetItem(QStringList() << error.testName << error.errorMessage);
+
         Qt::ItemFlags flags = item->flags();
-        flags &= ~Qt::ItemIsDropEnabled; // Cấm thả (drop) VÀO item này
+        flags &= ~Qt::ItemIsDropEnabled;
         item->setFlags(flags);
+
+        // === ĐÁNH DẤU: item này đại diện cho data ở index 'i' ===
+        item->setData(0, Qt::UserRole, i);
+        // =======================================================
+
         m_errorListWidget_1->addTopLevelItem(item);
     }
 }
@@ -1121,11 +1348,18 @@ void ComponentMapperWidget::updateErrorList_1()
 void ComponentMapperWidget::updateErrorList_2()
 {
     m_errorListWidget_2->clear();
-    for (const ErrorInfo &error : m_errors_2) {
+    for (int i = 0; i < m_errors_2.size(); ++i) { // Dùng vòng lặp 'i'
+        const ErrorInfo &error = m_errors_2[i];
         QTreeWidgetItem *item = new QTreeWidgetItem(QStringList() << error.testName << error.errorMessage);
+
         Qt::ItemFlags flags = item->flags();
-        flags &= ~Qt::ItemIsDropEnabled; // Cấm thả (drop) VÀO item này
+        flags &= ~Qt::ItemIsDropEnabled;
         item->setFlags(flags);
+
+        // === ĐÁNH DẤU: item này đại diện cho data ở index 'i' ===
+        item->setData(0, Qt::UserRole, i);
+        // =======================================================
+
         m_errorListWidget_2->addTopLevelItem(item);
     }
 }

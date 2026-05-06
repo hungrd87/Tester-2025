@@ -285,7 +285,7 @@ void Dialog::on_buttonBox_clicked(QAbstractButton *button)
 
 void Dialog::on_treeWidget_clicked(const QModelIndex &index)
 {
-    int id = index.data(ModuleRole).toInt()/3;
+    int id = index.data(ModuleRole).toInt();
     QPushButton *btn = ui->buttonBox->button(QDialogButtonBox::Ok);
     if(id<0){
         btn->setEnabled(false);
