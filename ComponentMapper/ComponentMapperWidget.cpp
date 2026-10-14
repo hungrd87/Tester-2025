@@ -1086,6 +1086,14 @@ void ComponentMapperWidget::runSimulationStep()
     m_testLogWidget->setTestProgress(progress);
     m_testLogWidget->setTestProgressText(QString("Đã kiểm tra: %1").arg(stepName));
 
+    // === 6b. Dừng sớm cho List 2 khi gặp lỗi đầu tiên ===
+    if (!isList1 && !pass) {
+        qDebug() << "List 2: Phát hiện lỗi tại item" << m_simulationIndex << "- Dừng mô phỏng.";
+        m_simulationTimer->stop();
+        onSimulationFinished();
+        return;
+    }
+
     // === 7. Chuẩn bị cho bước tiếp theo ===
     m_simulationIndex++;
 }

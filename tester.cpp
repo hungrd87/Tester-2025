@@ -225,8 +225,10 @@ void Tester::testLoop()
 
 bool Tester::prepareArm()
 {
-    if(m_module == MODULE_RECEIVER)
+    if(m_module == MODULE_RECEIVER){
         g_arm_cmd.working = 0;
+        g_arm_cmd.codeTL1 = 1;
+    }
     else if (m_module == MODULE_TEST){
         g_arm_cmd.working = 0;
         g_arm_cmd.codeTL1 = 2;
@@ -296,7 +298,8 @@ int Tester::combineTest()
             }
             else{
                 // return g_fpga_sta.result;
-                return (1<<(m_step+1));
+                // return (1<<(m_step+1));
+                return (1<<m_step);
             }
         }
     }

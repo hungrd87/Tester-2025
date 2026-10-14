@@ -31,8 +31,8 @@ Udp::Udp(QObject *parent) :
     g_arm_sta.cheap = -1;
     g_arm_sta.anten = -1;
     g_arm_sta.anten_sp = -1;
-    g_arm_sta.csphat = -1;
-    g_arm_sta.csphanxa = -1;
+    g_arm_sta.csphat = -2;
+    g_arm_sta.csphanxa = -2;
 
     g_fpga_sta.status = FPGA_STA_NONE;
     g_fpga_sta.module = -1;
@@ -183,6 +183,7 @@ void Udp::decodeFpga(char *data)
 
 void Udp::decodeArm(char *data, int len)
 {
+    static int has_cs = false, has_dk = false;
     int nframes = len/__FRAME_ARM_LEN__;
     for(int i=0; i<nframes; i++){
         char *dat = &data[i*__FRAME_ARM_LEN__];
@@ -191,12 +192,14 @@ void Udp::decodeArm(char *data, int len)
                 m_armOnline = true; cnt_arm = 0;
                 switch (dat[1]) {
                 case 0x01:
+                    has_dk = true;
                     if(dat[2] == char(0x52))
                         g_arm_sta.remote = 1;
                     else if(dat[2] == char(0x51))
                         g_arm_sta.remote = 0;
                     break;
                 case 0x02:
+                    has_dk = true;
                     g_arm_sta.mode = (dat[2]>>4) & 0x0f;
                     g_arm_sta.codeH1 = (dat[3]>>4) & 0x0f;
                     g_arm_sta.codeTL1 = dat[3] & 0x0f;
@@ -207,21 +210,25 @@ void Udp::decodeArm(char *data, int len)
                     }
                     break;
                 case 0x03:
+                    has_dk = true;
                     if(dat[2] == (char)0xA0)
                         g_arm_sta.working = 0;
                     else if(dat[2] == (char)0xB0)
                         g_arm_sta.working = 1;
                     break;
                 case 0x04:
+                    has_dk = true;
                     if(dat[2] == (char)0xC0)
                         g_arm_sta.transmit = 1;
                     else if(dat[2] == (char)0xD0)
                         g_arm_sta.transmit = 0;
                     break;
                 case 0x3B:
+                    has_cs = true;
                     g_arm_sta.csphat = (int)dat[2] * 256 + dat[3];
                     break;
                 case 0x3C:
+                    has_cs = true;
                     g_arm_sta.csphanxa = (int)dat[2] * 256 + dat[3];
                     break;
                 default:
@@ -231,10 +238,13 @@ void Udp::decodeArm(char *data, int len)
         }
     }
 
-   //Test
-   qDebug() << "mode" << g_arm_sta.mode << "working" << g_arm_sta.working << "transmit" << g_arm_sta.transmit;
-   qDebug() << "codeH1" << g_arm_sta.codeH1 << "codeTL1" << g_arm_sta.codeTL1 << "codeH3" << g_arm_sta.codeH3 << "codeTL3" << g_arm_sta.codeTL3;
-   qDebug() << "csphat" << g_arm_sta.csphat << "csphanxa" << g_arm_sta.csphanxa;
+    //Test
+    if(has_dk){
+        qDebug() << "mode" << g_arm_sta.mode << "working" << g_arm_sta.working << "transmit" << g_arm_sta.transmit;
+        qDebug() << "codeH1" << g_arm_sta.codeH1 << "codeTL1" << g_arm_sta.codeTL1 << "codeH3" << g_arm_sta.codeH3 << "codeTL3" << g_arm_sta.codeTL3;
+    }
+    if(has_cs)
+        qDebug() << "csphat" << g_arm_sta.csphat << "csphanxa" << g_arm_sta.csphanxa;
 }
 
 void Udp::sendToArm(int cmd_id)
