@@ -1,0 +1,74 @@
+name: Build
+
+on:
+  push:
+    branches: [develop, master]
+    tags: ['v*']
+  pull_request:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: write   # cần để đăng Release khi push tag
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Cùng bộ công cụ với máy phát triển: Qt 6.6.3 + MinGW 11.2 64-bit
+      - name: Cài Qt 6.6.3 MinGW
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: '6.6.3'
+          host: windows
+          target: desktop
+          arch: win64_mingw
+          # Gói tools_mingw90 / qt.tools.win64_mingw900 chính là "MinGW 11.2.0 64-bit"
+          tools: 'tools_mingw90,qt.tools.win64_mingw900'
+          cache: true
+
+      - name: Thêm MinGW vào PATH
+        shell: pwsh
+        run: |
+          $gxx = Get-ChildItem -Path $env:IQTA_TOOLS -Recurse -Filter g++.exe | Select-Object -First 1
+          if (-not $gxx) { throw "Không tìm thấy g++.exe trong $env:IQTA_TOOLS" }
+          Write-Host "MinGW: $($gxx.DirectoryName)"
+          echo $gxx.DirectoryName >> $env:GITHUB_PATH
+
+      - name: Build (Release)
+        shell: pwsh
+        run: |
+          qmake Tester.pro "CONFIG+=release" "CONFIG-=debug_and_release"
+          mingw32-make -j4
+
+      - name: Đóng gói (windeployqt + dữ liệu)
+        shell: pwsh
+        run: |
+          windeployqt --release --no-translations build/bin/Tester.exe
+          Copy-Item Tester.ico build/bin/
+          Copy-Item data build/bin/data -Recurse -Force
+          Remove-Item build/bin/*.o, build/bin/*.cpp -ErrorAction SilentlyContinue
+
+      - name: Upload bản build
+        uses: actions/upload-artifact@v4
+        with:
+          name: Tester-${{ github.sha }}
+          path: build/bin/
+
+      # Chỉ tạo bộ cài khi push tag dạng v2.1.2
+      - name: Tạo bộ cài Inno Setup
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: pwsh
+        run: |
+          choco install innosetup -y --no-progress
+          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" setup.iss
+
+      - name: Đăng Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: Output/*.exe
