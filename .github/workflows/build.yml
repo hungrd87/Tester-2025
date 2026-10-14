@@ -27,12 +27,17 @@ jobs:
           host: windows
           target: desktop
           arch: win64_mingw
-          tools: 'tools_mingw1120'
+          # Gói tools_mingw90 / qt.tools.win64_mingw900 chính là "MinGW 11.2.0 64-bit"
+          tools: 'tools_mingw90,qt.tools.win64_mingw900'
           cache: true
 
       - name: Thêm MinGW vào PATH
         shell: pwsh
-        run: echo "$env:IQTA_TOOLS\mingw1120_64\bin" >> $env:GITHUB_PATH
+        run: |
+          $gxx = Get-ChildItem -Path $env:IQTA_TOOLS -Recurse -Filter g++.exe | Select-Object -First 1
+          if (-not $gxx) { throw "Không tìm thấy g++.exe trong $env:IQTA_TOOLS" }
+          Write-Host "MinGW: $($gxx.DirectoryName)"
+          echo $gxx.DirectoryName >> $env:GITHUB_PATH
 
       - name: Build (Release)
         shell: pwsh
