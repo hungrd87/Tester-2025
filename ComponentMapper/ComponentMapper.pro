@@ -2,13 +2,14 @@
 QT       += core gui widgets
 
 # Tên của tệp thực thi (executable)
-TARGET = ComponentMapperTest
+TARGET = ComponentMapper
 
 # Đây là một ứng dụng (application)
 TEMPLATE = app
 
 # Báo cho qmake biết thư mục chứa header là thư mục hiện tại
 INCLUDEPATH += .
+INCLUDEPATH += ..
 
 # Các tệp nguồn
 SOURCES += \
@@ -34,7 +35,7 @@ HEADERS += \
 # và được sắp xếp gọn gàng theo tên của TARGET (ComponentMapperTest).
 
 # Thư mục gốc cho các tệp build (so với tệp .pro này)
-BUILD_DIR = ../build/$$TARGET
+BUILD_DIR = ../build
 
 # Thư mục cho tệp .exe
 DESTDIR = $$BUILD_DIR/bin

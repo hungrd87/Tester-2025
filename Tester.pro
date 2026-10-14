@@ -38,13 +38,16 @@ FORMS += \
     dialog.ui \
     view.ui
 
+RC_ICON = $$PWD/Tester.ico
+
 RC_FILE = Tester.rc
 
 RESOURCES += \
     resources.qrc
 
 # Thư mục gốc cho các tệp build (so với tệp .pro này)
-BUILD_DIR = build/$$TARGET
+# BUILD_DIR = build/$$TARGET
+BUILD_DIR = build
 
 # Thư mục cho tệp .exe
 DESTDIR = $$BUILD_DIR/bin

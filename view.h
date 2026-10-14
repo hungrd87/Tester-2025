@@ -24,6 +24,7 @@ public:
 
     void changeIp();
     void loadStep();
+    void setAdmin(bool is_admin);
 
 public slots:
     void firstConfig();

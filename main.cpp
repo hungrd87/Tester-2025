@@ -1,7 +1,8 @@
-#include "view.h"
-
 #include <QApplication>
 #include "udp_def.h"
+
+#include "view.h"
+#include "dialog.h"
 
 void myMessageOutput(QtMsgType type, const QMessageLogContext&, const QString &msg);
 void getParams();
@@ -12,10 +13,12 @@ int main(int argc, char *argv[])
     a.setWindowIcon(QIcon(qApp->applicationDirPath() + "/Tester.ico"));
 
     //Check Arguments
-    bool is_log = false;
+    bool is_log = false, is_admin = false;
     for(int i=0; i<argc; i++){
         if(QString::fromLatin1(argv[i]).contains("--log") || QString::fromLatin1(argv[i]).contains("-l"))
-            is_log = true;            
+            is_log = true;
+        if(QString::fromLatin1(argv[i]).contains("--admin") || QString::fromLatin1(argv[i]).contains("-a"))
+            is_admin = true;
     }
 
     if(is_log)
@@ -24,7 +27,11 @@ int main(int argc, char *argv[])
     getParams();
 
     View w;
+    if(is_admin) {w.setAdmin(is_admin);}
+
+    // Dialog w;
     w.show();
+
     return a.exec();
 }
 
